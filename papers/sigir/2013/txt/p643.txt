@@ -1,0 +1,1791 @@
+A General Evaluation Measure for Document Organization
+
+Tasks
+
+Enrique Amigó
+
+E.T.S.I. Informática UNED
+
+Juan del Rosal, 16
+
+Madrid, Spain
+
+enrique@lsi.uned.es
+
+Julio Gonzalo
+
+E.T.S.I. Informática UNED
+
+Juan del Rosal, 16
+
+Madrid, Spain
+
+julio@lsi.uned.es
+
+Felisa Verdejo
+
+E.T.S.I. Informática UNED
+
+Juan del Rosal, 16
+
+Madrid, Spain
+
+felisa@lsi.uned.es
+
+ABSTRACT
+A number of key Information Access tasks – Document Re-
+trieval, Clustering, Filtering, and their combinations – can
+be seen as instances of a generic document organization prob-
+lem that establishes priority and relatedness relationships
+between documents (in other words, a problem of forming
+and ranking clusters). As far as we know, no analysis has
+been made yet on the evaluation of these tasks from a global
+perspective. In this paper we propose two complementary
+evaluation measures – Reliability and Sensitivity – for the
+generic Document Organization task which are derived from
+a proposed set of formal constraints (properties that any
+suitable measure must satisfy).
+
+In addition to be the ﬁrst measures that can be applied to
+any mixture of ranking, clustering and ﬁltering tasks, Reli-
+ability and Sensitivity satisfy more formal constraints than
+previously existing evaluation metrics for each of the sub-
+sumed tasks. Besides their formal properties, its most salient
+feature from an empirical point of view is their strictness:
+a high score according to the harmonic mean of Reliability
+and Sensitivity ensures a high score with any of the most
+popular evaluation metrics in all the Document Retrieval,
+Clustering and Filtering datasets used in our experiments.
+
+Categories and Subject Descriptors
+B.8 [Performance and Reliability]: General
+
+General Terms
+Measurement, Performance
+
+Keywords
+IR eﬀectiveness measures
+
+1.
+
+INTRODUCTION
+
+Some key Information Access tasks can be seen as in-
+stances of a generic document organization problem that es-
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for proﬁt or commercial advantage and that copies bear
+this notice and the full citation on the ﬁrst page. Copyrights for components
+of this work owned by others than ACM must be honored. Abstracting with
+credit is permitted. To copy otherwise, or republish, to post on servers or to
+redistribute to lists, requires prior speciﬁc permission and/or a fee. Request
+permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+tablishes priority (ranking) and relatedness (clustering) re-
+lationships between documents. Let us think of a generic
+document organization system as a function from document
+pairs d, d(cid:48) into one of these possible relationships: (cid:31), which
+means that d has more priority than d(cid:48), and ∼, which means
+that d and d(cid:48) have some kind of topical equivalence. We will
+use the notation (cid:107) for the cases in which the other two rela-
+tions do not hold, and the notation {d1, d2 . . . dn} to indicate
+that d1 . . . dn are all related via the topical equivalence rela-
+tion ∼.
+
+This general problems subsumes:
+Document Ranking. This case is illustrated in Table 1.
+The gold standard establishes (at least) two priority levels
+(relevant versus non-relevant), and the system output re-
+turns an ordered list with one priority level per document.
+For clarity, in the table we use a bold font for relevant docu-
+ments. Note that, in this problem, it is assumed that there
+is an unlimited amount of irrelevant documents, while the
+set of relevant documents is limited. Both the gold standard
+and the system output contain, implicitly, an unlimited set
+of documents in the last level. The gold standard contains
+two priority levels (with the documents manually judged)
+while the system output contains as many levels as returned
+documents.
+
+Document Filtering. Table 2 illustrates this case; now,
+both the gold standard and the system output consist of two
+priority levels (relevant and irrelevant).
+
+Document Clustering is exempliﬁed in Table 3. Now
+there is only one priority level, and a set of clusters which
+contain related documents. Both the gold standard and the
+system output have the same form. Table 4 illustrates the
+variant of overlapping clustering, where a document may
+simultaneously appear in more than one cluster.
+
+Evaluation metrics have been extensively discussed for
+each of these tasks. There are, however, many practical
+problems where the system must be able both to detect top-
+ical relationships (clustering documents) and relative prior-
+ities (some clusters are more relevant than others). Let us
+give a couple of examples:
+
+Alert detection. A number of practical information
+access problems involve detecting, in an incoming stream
+of documents, new information that is both novel and of
+high priority. Online Reputation Management, for instance,
+involves monitoring online information about an entity (a
+company, brand, product, person, etc.), clustering texts into
+the main topics, and establishing which of them have higher
+priority (for instance, those that may potentially damage
+the reputation of the entity).
+
+643Gold Standard
+
+System Output
+
+d1, d2, d3
+
+d4, d5, d6, d7 ..dn
+
+d1
+d2
+d6
+d3
+d14
+
+d4, d5, d7, ..dn
+
+Table 1: Example of Document Ranking task. Ver-
+tical ordering indicates relative priorities
+
+Goldstandard
+
+d1, d2 , d3
+
+d4, d5, d6, d7, d8
+System output
+
+d1 , d2 , d4
+
+d3, d5, d6, d7, d8
+
+Table 2: Example of ﬁltering task
+
+Search Results Organization. Given the set of top
+ranked documents retrieved for a query, a mechanism to
+group related documents and assign priorities between clus-
+ters can be used to improve search results in many ways: (i)
+to enhance search results diversity by maximizing the num-
+ber of highly relevant topics represented in the top results;
+(ii) to provide keyword suggestions to reﬁne the query, sam-
+pled from the most relevant clusters; (iii) to directly display
+search results as a ranked list of relevant topics correspond-
+ing to alternative query interpretations, subtopics or facets
+in the retrieved documents.
+
+This type of tasks (and others such as composite retrieval)
+– which are more complex than the standard ranking and
+clustering problems – still match the generic Document Or-
+ganization task as we have deﬁned it. An example is shown
+in Table 5. In the gold standard there is, for instance, one
+topic with two documents (d1 ∼ d2) at the top priority level,
+and two topics at the second level (d3 ∼ d4 and d5 ∼ d6).
+In the next three priority levels there are two single docu-
+ments and another topic. The example includes overlapping
+clusters: for instance, d5 is relevant for two topics, one in
+the second priority level and another one in the fourth.
+
+Finally, the (potentially long) list of documents at the bot-
+tom of the gold standard ranking (d11, d12, d13, ... dn) rep-
+resents irrelevant documents which are not judged in terms
+of topical similarity, and are therefore represented via the
+empty relationship (cid:107).
+
+Evaluation measures have been proposed to evaluate clus-
+tering outputs in the context of document retrieval [14, 8,
+18] and to include the notion of diversity in search results[15,
+24, 9]. But, to the best of our knowledge, no measure has
+been previously designed to evaluate the general document
+organization problem and all the tasks subsumed by this
+one.
+
+In order to ﬁnd appropriate evaluation measures for the
+generic Document Organization problem, we will focus on
+the speciﬁcation of the formal constraints that they should
+satisfy in each of the subsumed tasks (ﬁltering, clustering
+and ranking). Our goal is ﬁnding an evaluation measure
+
+Gold standard
+
+{d1, d2, d3}, {d4,d5,d6}, d7
+{d1,d2}, d3, {d4, d5, d6, d7}
+
+System output
+
+Table 3: Example of Clustering task.
+
+Gold standard
+
+{d1, d2, d3}, {d4, d5, d6}, {d4, d7}
+{d1, d2}, d3, {d4, d5, d6, d7}, {d6, d7}
+
+System output
+
+Table 4: Example of overlapping clustering
+
+for the general document organization task that (i) satisﬁes
+formal constraints for all the tasks; (ii) turns into suitable
+existing measures when mapped into each of the subsumed
+tasks.
+
+Our research leads to propose Reliability and Sensitivity
+which are, in short, precision and recall over document pair
+relationships established in the gold standard, with a suit-
+able weighting scheme. Comparing them with state of the
+art measures for each particular scenario, we ﬁnd that Reli-
+ability and Sensitivity satisfy more formal constraints than
+previously existing measures in most cases. In addition, its
+harmonic mean is stricter than previously existing measures
+– a high score implies high scores with respect to all other
+standard measures –, which is an interesting property when
+the application scenario does not clearly prescribe a more
+speciﬁc evaluation measure.
+
+We will start by establishing the set of formal constraints
+that any suitable metric should satisfy (Section 2); then we
+present our proposed measures (Section 3) and discuss its
+application to the diﬀerent tasks (Section 4). We end by
+showing how the measures apply to the more complex doc-
+ument organization task, and discussing the main implica-
+tions of our results.
+
+2.
+
+INFORMATION ACCESS MEASURES AND
+FORMAL CONSTRAINTS
+
+Our approach to measure design is to start deﬁning a set of
+formal constraints, i.e. a set of formal, veriﬁable properties
+that any suitable measure should satisfy. In addition, they
+explain the nature of diﬀerent evaluation measure families.
+We will start by reviewing (or proposing) formal constraints
+for each of the subsumed tasks, and then merge all collected
+constraints into a single list of properties for the generalized
+measures. Table 6 summarize the results of this analysis.
+
+Gold standard
+{d3, d4}, {d5, d6}
+
+{d1, d2}
+
+d7
+
+{d5, d8, d9}
+
+d10
+
+d11, d12, d13, ... , dn
+
+System output
+
+d1
+d2
+
+{d3, d4}, {d5, d6}
+
+{d5, d7, d9}
+
+d8
+d12
+
+d10, d11, d13, ... dn
+
+Table 5: An example of gold standard and system
+output for the generic information retrieval task.
+
+644Measure
+
+Set matching
+Entropy based
+Edit distance
+Counting pairs
+
+Bcubed
+
+Homo. Comp. Rag
+
+Size vs
+Bag Quantity
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ (overlap)
+
+
+
+
+
+
+MAP, DCG, Q measure
+
+P10
+MRR
+RBP
+
+UTILITY, F, LAM%
+
+R*S
+
+
+
+
+
+
+
+
+
+Priority Deepness Deepness
+
+Closeness Conﬁdence
+
+Threshold Threshold
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Table 6: Formal constraints satisﬁed by standard measures and R*S
+
+2.1 Document Clustering
+
+[2] provides a detailed analysis of clustering evaluation
+measures (grouped by families) and the constraints they
+should satisfy. We brieﬂy describe here these constraints
+and refer to [2] for its justiﬁcation and formal description.
+We will say that the system output produce clusters while
+the gold standard is composed by classes. Q represents the
+quality of a clustering distribution and a, b, c, d.. are docu-
+ments from diﬀerent classes:
+
+Cluster Homogeneity: This restriction was ﬁrstly pro-
+posed in [22]. Given a certain system output document
+distribution, splitting documents that do not belong to the
+same class, must increase the output quality:
+
+Q({a, a, a},{b, b}...) > Q({a, a, a, b, b}...)
+
+Although it seems a very basic constraint, in [2] it is shown
+that measures based in editing distance do not satisfy it.
+
+Cluster Completeness: The counterpart to the ﬁrst
+constraint is that documents belonging to the same assessed
+class should be grouped in the same cluster [2, 22]:
+Q({a, a, a, a, a,}...) > Q({a, a, a},{a, a}...)
+
+Measures based on set matching, such as Purity and Inverse
+Purity do not satisfy this contraint.
+
+Rag Bag: This constraint states that introducing disor-
+der into a disordered cluster (rag bag) is less harmful than
+introducing disorder into a clean cluster. That is:
+
+Q({a, a, a, a},{b, c, d, e}..) > Q({a, a, a, a, b},{c, d, e}..)
+
+In general, all traditional measures fail to comply with this
+constraint.
+
+Cluster size vs. quantity: A small error in a big clus-
+ter is preferable to a large number of small errors in small
+clusters [2, 19, 22]. This constraint prevents the problem
+that measures based on counting pairs [19, 13], overweight
+big clusters. That is:
+
+Q({a, a, a, a},{a},{b, b}{c, c}{d, d}{e, e}...) >
+
+Q({a, a, a, a, a},{b},{b},{c},{c},{d},{d},{e},{e}..)
+
+Measures based on counting pairs are sensitive to the com-
+binatory explosion of pairs in big clusters, failing on this
+constraint.
+
+In [2] it is shown how the above contraints discriminate
+between four families of evaluation measures for the clus-
+tering problem: measures based on set matching (e.g. F
+
+measure, Purity and Inverse Purity), entropy-based mea-
+sures (Entropy, class Entropy, Mutual Information), mea-
+sures based on counting pairs and edit distance measures.
+Interestingly, there is only one pair of measures, BCubed
+Precision and Recall, that satisﬁes all constraints simulta-
+neously, and forms an independent family. However, we will
+show in this paper that the extended version of Bcubed for
+overlapping clustering does not satisfy the last constraint.
+2.2 Document Filtering
+
+Filtering is a binary classiﬁcation problem where there is
+a relative priority between the two classes: the system must
+classify each document as positive or negative, being the
+positive class the one that stores the relevant information.
+In the ﬁltering scenario all existing measures satisfy a basic
+constraint:
+
+Priority Constraint Moving a positive (relevant) docu-
+ment from the predicted negative set to the predicted pos-
+itive set, or moving a negative (irrelevant) document from
+the predicted positive to the predicted negative set must in-
+crease the system output quality. Being dr and d¬r a judged
+relevant/irrelevant document respectively:
+
+Q({dr..},{..}) > Q({..},{dr..})
+Q({..},{d¬r..}) > Q({d¬r..},{..})
+
+This constraint is satisﬁed by every standard measure.
+Filtering is a basic binary classiﬁcation task that can be
+evaluated in multiple ways, but it is diﬃcult to deﬁne objec-
+tively desirable boundary constraint that discriminate mea-
+sures. However, there are descriptive properties which are
+mutually exclusive and explain the nature of diﬀerent mea-
+sure families [3]. These properties focus on how the metrics
+score non-informative outputs D¬inf depending on the size
+of the positive set S(D¬inf ). A non-informative output is a
+random distribution of the documents that is independent
+on the content of the input documents. An ”all positive”
+baseline, for instance, is a non-informative output where the
+size of the positive set is equivalent to the size of the input
+set.
+
+For instance, there is a large set of ﬁltering measures
+that assign a ﬁxed score to every non-informative output:
+Lam [11], the Macro Average Accuracy [20] and, in general,
+measures based on correlation such as the Kappa statistic
+(Q(D¬inf ) = constant). Other family of measures
+[10].
+assumes that, if the ﬁltering system does not know any-
+
+645thing, returning all is better than removing documents ran-
+domly.
+In this case, the score for a non-informative sys-
+tem is correlated with the size of the positive output set:
+(Q(D¬inf ) ∝ S(D¬inf )) This is the case of the harmonic
+mean of Precision and Recall over the positive class. Fi-
+nally, measures such as Accuracy or Utility assign relative
+weights to documents in each of the cases in the confusion
+matrix; Depending on how these parameters are set and on
+the distribution of classes in the input, the optimal positive
+class size for a non-informative output varies.
+2.3 Document Ranking
+
+In order to deﬁne a set of constraints for the document
+ranking (or document retrieval) task, we have to take into
+account some aspects. First, documents at the top of the
+ranking must have more weight in the evaluation process:
+even if the system is able to sort all documents, the user will
+not be able to explore all of them. The sizes of the relevant
+and the irrelevant set are expected to be heavily unbalanced:
+potentially, the amount of irrelevant documents for a given
+query is (in practice) unlimited. Second, traditional docu-
+ment retrieval is a mixture of ﬁltering and ranking tasks:
+an optimal system should not only rank the documents, but
+also decide on the size of the output set, depending on the
+amount of relevant documents in the collection and the self-
+assessed quality of the system output. These two features
+– which are related the fact that the gold standard and the
+system output take diﬀerent forms, unlike the ﬁltering and
+clustering problems – make document retrieval evaluation
+harder than it seems a priori.
+
+There is a large number of proposed measures in the state
+of the art. Some of the most popular are: precision at cer-
+tain recall levels or ranking positions, AUC [12], MAP (Mean
+Average Precision), Discounted Cumulative Gain [16], Ex-
+pected Reciprocal Rank (ERR)[25], Q-measure, Binary Pref-
+erence [4], or Rank Biased Precision [21], among many oth-
+ers. Let us analyze them in terms of formal constraints.
+
+First, the Priority Constraint from the ﬁltering prob-
+lem also applies here (see previous subsection) and it is satis-
+ﬁed by most measures. A notable exception is P@10 (preci-
+sion at the top ten documents retrieved), given that it is not
+sensitive to relationships after the tenth position in the sys-
+tem output ranking, and to internal reorderings in the top
+ten setWe can express this constraint in the context of Doc-
+ument Retrieval evaluation as, being r and ¬r relevant and
+irrelevant documents respectively, and being {d1, d2, d3..dn}
+an output ranking:
+
+Q({..ri+1,¬ri+2..}) > Q({..¬ri+1, ri+2..})
+
+Deepness Constraint: The more we go to a deeper point
+in the output ranking, the less the probability of documents
+being explored by the user. Therefore, the eﬀect of a docu-
+ment priority relationship in the system quality depends on
+the depth of the documents in the ranking. Being i<j:
+
+Q({..ri,¬ri+1..}) − Q({..¬ri, ri+1..}) <
+Q({..rj,¬rj+1..}) − Q({..¬rj, rj+1..})
+
+Measures based on traditional correlation, such as AUC or
+Kendall, do not satisfy this contraint, because they give the
+same weight to all elements in the ranking. Also, P@10
+obviously does not satisfy this contraint.
+
+Deepness Threshold Constraint: Although P@10 does
+not satisfy the previous two constraints, one motivation for
+
+using it is that in some cases it is advisable to assume a prac-
+tical deepness threshold. In other words, there is a ranking
+area which will never be explored by the user. We can ex-
+press this as a constraint by saying that there exists a value
+n large enough such that retrieving one relevant document
+at the top of the rank is better than retrieving n relevant
+documents after n irrelevant documents:
+Q({r1,¬r2,¬r3..¬r2n}) > Q({¬r1,¬r2..¬rn−1, rn..r2n})
+
+We will not include all the formal proofs on how measures
+satisfy this constraint, due to space availability; we will only
+discuss the proof that MAP does not satisfy it.
+
+1
+Nr
+
+The score for the leftmost distribution in the constraint
+, assuming that there are Nr relevant documents in
+is
+the collectionWe can prove that the score for the rightmost
+distribution is always higher:
+
+i=n(cid:88)
+
+i=n(cid:88)
+
+i=1
+
+1
+Nr
+
+i =
+
+M AP =
+
+i=n(cid:88)
+
+i=1
+
+1
+
+2nNr
+
+i
+
+>
+
+1
+Nr
+
+n + i
+
+i=1
+
+i
+2n
+
+=
+
+(n − 1)n
+
+1
+
+2nNr
+
+2
+
+(n − 1)
+4Nr
+
+=
+
+which is bigger than 1
+for any n > 4. DCG does not com-
+Nr
+ply with this constraint either: DCG for the ﬁrst distribution
+is 1, before normalization. And for the second distribution
+we have:
+
+i=n(cid:88)
+
+i=n(cid:88)
+
+>
+
+DCG =
+
+1
+
+log2(i + n)
+
+i=1
+
+log2(2n)
+
+i=1
+
+1
+
+=
+
+n
+
+log2(2n)
+
+> 1
+
+For instance, according to MAP or DCG, ﬁnding 1,000 rel-
+evant documents after 1,000 irrelevant documents is better
+than having only one relevant document, but at the top of
+the rank. This is counterintuitive in many practical settings.
+The Q-measure is an extension of MAP for multigraded
+relevance, having a similar behavior. However, the mea-
+sure ERR does satisfy this constraint (as well as P@10), due
+to the strong relevance discount for positions deeper in the
+rank. Measures with similar weighting schemes also satisfy
+this constraint, but at the cost of failing to satisfy the next
+one.
+
+Closeness Threshold Constraint: There exists a (short)
+
+ranking area which is always explored by the user. For in-
+stance, we can assume that the top three documents re-
+turned by a search engine for informational queries are al-
+ways inspected. We formalize this constraint as the counter
+part of the previous constraint: There exists a value n small
+enough such that retrieving one relevant document in the
+ﬁrst position is worse than n relevant documents after n
+irrelevant documents:
+Q({r1,¬r2,¬r3..¬r2n}) < Q({¬r1,¬r2..¬rn−1, rn..r2n})
+
+In the case of P@10, n is 9 (i.e. for any n lower than 9, the
+constraint is satisﬁed). ERR, on the other hand, does not
+satisfy the constraint: given its strong discount with ranking
+depth, one relevant document at the ﬁrst position has always
+more weight than n relevant documents after the position n.
+The measures RBP and the discounting function proposed
+by Smucker and Clarke [23] satisfy all the previous con-
+straints. The common characteristic of both measures is
+that they are based on a probabilistic user behavior model.
+
+646However, all proposed measures fail on the following con-
+straint.
+
+Conﬁdence Constraint. The output ranking does not
+necessarily include all documents in the collection and, there-
+fore, the amount of documents returned is also an aspect of
+the system quality. The classical TREC ad-hoc evaluation
+does not consider this aspect, given that the length of the
+rank is ﬁxed; nevertheless, there is research focused on the
+prediction of ranking quality, in order to determine when an
+output rank must be shown to the user. We include this
+aspect in our constraints by stating that extending the rank
+with irrelevant documents should decrease the output score:
+
+Q({d1, d2..dn}) > Q({d1, d2..dn,¬rn+1})
+
+Given that most measures are based on accumulative rele-
+vance weighted by the location in the ranking [5], we can
+conclude that irrelevant documents at the bottom of the
+ranking do not aﬀect the score and the constraint is not sat-
+isﬁed. As far as we know, current evaluation measures do
+not consider this aspect.
+
+In summary, for the tasks subsumed under our document
+organization problem, the result of our analysis is that (i) in
+clustering, only the Bcubed measure satisﬁes all constraints,
+with the exception of one of them in the case of overlapping
+clustering; (ii) in the ﬁltering scenario, all measures satisfy
+the priority constraint, but behave in very diﬀerent manners
+with respect to how they score non-informative outputs; and
+(iii) Finally, in the case of document retrieval, we have de-
+tected a few measures that satisfy all constraints except the
+last one, but none that satisﬁes all constraints.
+
+Our goal is ﬁnding a measure that can be applied to all
+of the subsumed tasks and to any combination of them (i.e.
+to the general document organization problem), and that
+satisﬁes all constraints coming from each of the subsumed
+tasks. In the next section we introduce our proposal.
+
+3. PROPOSAL: RELIABILITY AND SENSI-
+
+TIVITY
+
+Our proposal consists of two complementary measures,
+Reliability and Sensitivity, with a straightforward initial def-
+inition. Let us consider a system output X and a gold
+standard G, which are both a set of document relationships
+r(d, d(cid:48)) ∈ {(cid:31),≺,∼}. The Reliability (R) of relationships in
+the system output is the probability of ﬁnding them in the
+gold standard. Reversely, the Sensitivity (S) of predicted
+relationships is the probability of ﬁnding them in the sys-
+tem output when they appear in the gold standard. In other
+words, R and S are precision and recall of the predicted set
+of relationships with respect to the true set of relationships:
+
+(cid:48)
+
+R(X ) ≡ P (r(d, d
+S(X ) ≡ P (r(d, d
+(cid:48)
+
+(cid:48)
+
+) ∈ G|r(d, d
+) ∈ X|r(d, d
+
+) ∈ X )
+) ∈ G)
+(cid:48)
+
+We can express Reliability as a sum of probabilities pondered
+by the weight of each relationship in X :
+
+P (r(d, d
+
+(cid:48)
+
+) ∈ G)wX (r(d, d
+
+(cid:48)
+
+))
+
+R(X ) ≡ (cid:88)
+
+r(d,d(cid:48))∈X
+
+We want to observe three restrictions on relationship weights:
+
+(i) wX (r(d, d(cid:48))) = f (wX (d), wX (d(cid:48))), i.e., the weight of a re-
+lationship is a function of the weights of the documents in-
+volved. In Document Retrieval, the weight of a document
+
+(ii) w(d) = (cid:80)
+
+will be related to its probability of being inspected by the
+user, which is related at least to its position in the ranking;
+d(cid:48) w(r(d, d(cid:48))), i.e., the weight of all relations
+starting from a document d determines the weight of doc-
+ument d; this restriction prevents the quadratic eﬀect of
+counting binary relationships and is related to the ”size vs
+quantity” restriction for the clustering problem that we want
+to satisfy; and ﬁnally (iii) the contribution w(d, d(cid:48)) of each
+d(cid:48) related to d should be proportional to the weight of d(cid:48).
+Then, we can express R and S in terms of weights of single
+documents. Being wX (d) the weight of d in X and being
+Wx,d the sum weight of documents related with d:
+
+(cid:88)
+
+WX ,d =
+
+d(cid:48)/r(d,d(cid:48))∈X
+
+(cid:48)
+wx(d
+
+)
+
+we can compute R and S as:
+
+(cid:88)
+(cid:88)
+
+r(d,d(cid:48))∈X
+
+r(d,d(cid:48))∈G
+
+R(X ) =
+
+S(v) =
+
+P (r(d, d
+
+(cid:48)
+
+) ∈ G)
+
+wx(d(cid:48))
+Wx,d
+
+wx(d)
+
+P (r(d, d
+
+(cid:48)
+
+) ∈ X )
+
+wg(d(cid:48))
+Wg,d
+
+wg(d)
+
+If all documents have the same weight in the distributions, R
+and S simply turn into the average R(d) and S(d) associated
+to each document:
+
+R(X ) = AvgdP (r(d, d(cid:48)) ∈ G|r(d, d(cid:48)) ∈ X )
+S(X ) = AvgdP (r(d, d(cid:48)) ∈ X|r(d, d(cid:48)) ∈ G)
+
+3.1 Estimating Document Weight Discounting
+In the generic document organization task we must as-
+sume that there exists a virtually unlimited amount of doc-
+uments in the collection. Therefore, we must weight docu-
+ments according to their priority in the system output or in
+the gold standard. There exist several studies on predict-
+ing the weight of a document in the ranking in terms of the
+probability to be explored by the user. Most of them are
+based on assumptions over user behavior [6, 7, 23]. How-
+ever, there is no clear consensus yet on how to model the
+empirical user behavior. Rather than this, we focus on ba-
+sic constraints and interpretability as the main criteria to
+choose a weighting scheme.
+We model the weight of the document in the i position
+as the weight integration between i − 1 and i. The ﬁrst
+constraint is that the sum weight for all documents must be
+ﬁnite. Therefore, we must employ a function with a converg-
+ing integral. We select 1
+i2 because it is a simple, soft decay,
+integrable and convergent function. We leave the reﬁnement
+of the discounting curve for a latter parameterization step;
+ideally, our evaluation measure should be as general as pos-
+sible, and therefore it must have parameters to establish how
+much of the ranking (v.g. the top 10 vs the top 100) carries
+on how much of the weight (v.g. 50% or 99% of the overall
+score) in the evaluation.
+
+According to 1
+
+i2 , the weight of the document in position i
+
+in the priority ordering is:
+
+wX (d) = c1
+
+1
+x2 dx = c1
+
+1
+
+c + i − 1
+
+− 1
+c + i
+
+(1)
+
+(cid:90) c+i
+
+c+i−1
+
+(cid:18)
+
+(cid:19)
+
+where c1 is a normalization factor to ensure that the sum is
+1. c is another parameter that moves the function in order
+
+647to give more or less weight to the high priority documents.
+Stating that the total sum weight is one:
+
+(cid:90) ∞
+
+c1
+
+c
+
+1
+x2 dx = c1
+
+1
+c
+
+= 1
+
+Therefore, c = c1. The next constraint is that we should be
+able to parameterize the weighting curve in an interpretable
+way. Ideally, we want to be able to set two parameters n
+and Wn which mean that the ﬁrst n documents must cover
+a Wn weight ratio of the overall evaluation score. For in-
+stance, we may want to state that the ﬁrst 30 positions in
+the ranking (n = 30) will have an 80% of the total weight
+in the evaluation measure (Wn = 0.8). Therefore:
+(1 − Wn)n
+
+(cid:90) c+n
+
+1
+
+x2 dx = Wn =⇒ c =
+
+Wn
+
+c
+
+c
+
+Now, we can estimate the weight of each document in the
+system output or in the gold-standard according to Formula
+1. Documents at the same priority level share the interval
+weight. Being n(cid:31) and n= the amount of documents with
+more and equal relevance than d respectively we can esti-
+mate the weight of each document as:
+
+(cid:90) c+n(cid:31)+n=
+
+wX (d) =
+
+c1
+n=
+
+c+n(cid:31)
+
+1
+x2 dx
+
+(2)
+
+Smucker and Clarke proposed a discounting model based
+on exploration time calibration[23] which considers addi-
+tional aspects such as the relevance and length of documents.
+Actually, this model is compatible with our proposal: we
+can incorporate this by replacing the i position of documents
+with a time function. We leave this analysis for future work.
+3.2 Overlapping Clusters
+
+As we mentioned earlier, a document may appear in mul-
+tiple clusters (corresponding, for instance, to diﬀerent in-
+formation nuggets in the document), and therefore it may
+appear at multiple priority levels.
+If overlapping between
+clusters is allowed, a document has potentially a diﬀerent
+number of occurrences in the gold and system output distri-
+bution. If there exists only one instance of d and d(cid:48) in both
+the gold standard and the system output, the probability of
+coocurrence is 1 when the relationships match. Otherwise,
+following the extended Bcubed measure proposed in [2], we
+assume the best possible correspondence between relation-
+ships in X and G. For instance, if two documents are related
+in the system output less times than in the gold standard,
+then all the predicted relationships are assumed to be cor-
+rect. Otherwise, the probability is the ratio of gold relation-
+ships per system relationships. Formally, being |rG(d, d(cid:48))|
+and |rX (d, d(cid:48))| the number of occurrences of r(d, d(cid:48)) in G
+and X respectively:
+
+P (r(d, d
+
+(cid:48)
+
+) ∈ G) =
+
+P (r(d, d
+
+(cid:48)
+
+) ∈ X ) =
+
+min(|rG(d, d(cid:48))|,|rX (d, d(cid:48))|)
+
+|rX (d, d(cid:48))|
+
+min(|rG(d, d(cid:48))|,|rX (d, d(cid:48))|)
+
+|rG(d, d(cid:48))|
+
+(3)
+
+(4)
+
+3.3 Measure Computation
+
+Here we state the method to compute R and S over the
+general document organization task. We assume that there
+is a set of prioritized documents Xr organized by levels and
+clusters and a special, bottom level containing an unlimited
+
+(cid:90) c+|Xr|
+
+c
+
+amount of irrelevant/discarded documents X¬r (see Table
+5). The weight of a single document in the set of prioritized
+documents Xr is computed as in Equation 2. The weight of
+prioritized documents Xr in the system output is:
+
+W (Xr) = c
+
+1
+
+x2 = 1 −
+
+c
+
+c + |Xr|
+
+The weight of the long tail of non prioritized documents X¬r
+in the system output is:
+WX (X¬r) = c
+
+(cid:90) ∞
+
+c
+
+1
+x2 =
+
+c + |Xr|
+
+c+|Xr|
+
+The sum weight of documents priority related with d is 1
+minus the sum weight of documents in the same priority
+level:
+
+WX ,d,≺(cid:31) = 1 − (cid:88)
+
+(cid:48)
+wx(d
+
+)
+
+d(cid:48)/¬(d(cid:48)≺(cid:31)X d)
+
+The probability P (r(dij, dkl) ∈ G) for a document relation-
+ship between two document occurrences in Xr is computed
+as in Equation 3 for both the clustering and priority rela-
+tionships.
+As for the relationships between the unlimited tail X¬r
+and documents in Xr, we must consider that all documents
+in the inﬁnite set X¬r have the same weight. Therefore,
+the ﬁnite amount of relevant documents in the long tail has
+no eﬀect. Then, any relevant document in Xr is correctly
+related with all documents in X¬r if it appears between the
+prioritized documents in Gr. According to Equation 3, being
+dij the j occurrence of document di in the system output
+and being Di its set of occurrences1:
+
+P (dij (cid:31)G X¬r) =
+
+min(|Di ∩ Gr|,|Di ∩ Xr|)
+
+|Di ∩ Xr|
+
+According to all of this, Reliability over priority relation-
+
+ships can be computed as follows2
+
+P (r(dij, dkl) ∈ G)wx(di,j)wx(dk,l)
+
++
+
+Wx,dij ,≺(cid:31)
+
+(cid:18)
+
+(cid:19)
+
+(cid:88)
+
+R≺(cid:31) =
+
+dij dkl∈Xr
+r(dij ,dkl)∈X
+
+(cid:88)
+
+dij∈Xr
+
+P (dij (cid:31)g X¬r)wx(dij)W (X¬r)
+
+1
+
+Wx,dij ,≺(cid:31)
+
++
+
+1
+
+Wx(Xr)
+
+Assuming that the documents in the long tail do not have
+clustering relationships with each other, Reliability over clus-
+tering relationships can be computed as follows:
+
+P (dij ∼g dkl)wx(dij)wx(dkl)
+
+Wx,dij ,∼
+
++ Wx(X¬r)
+
+R∼ =
+
+(cid:88)
+
+dij∈Xr
+dkl∈Xr
+dij∼xdkl
+
+Sensitivity is computed in the same way, but exchanging
+X by G and x by g. The complexity of this computation
+is O(n2), being n the amount of ranked documents Xr or
+prioritized documents Gr.
+1For the sake of simplicity, we notate P (dij (cid:31) X¬r ∈ G) as
+P (dij (cid:31)G X¬r)
+2The ﬁrst component covers the relationships within docu-
+ments in Xr. The second and third components cover the
+relationship Xr → X¬r and X¬r → Xr respectively.
+
+648Figure 1: Comparing Evaluation Measures over Document Filtering Task.
+
+4. RELIABILITY AND SENSITIVITY: META-
+
+EVALUATION
+
+As far as we know, Reliability and Sensitivity are the ﬁrst
+measures which are applicable to the general document or-
+ganization task. For this reason, our comparison will focus
+on how R and S behave in each of the subsumed tasks (ﬁlter-
+ing, clustering, ranking) with respect to previously existing
+measures.
+4.1 Meta-evaluation Criteria
+
+There are many ways of meta-evaluating a new measure.
+The most direct one consists of comparing measure scores
+vs. human assessments of quality, or system results in some
+extrinsic task. Other meta-evaluation criteria focus on the
+hability to capture information from limited data sets. Some
+examples are discriminativeness [23], statistical signiﬁcant
+diﬀerences between systems[21], stability method, swap method,
+robustness against noisy data, correlation between rankings
+over diﬀerent data sets [5], etc. The main drawback of these
+methods is that a measure can be, for instance, perfectly
+discriminative under limited data sets without giving infor-
+mation about quality. As an extreme example, the rank-
+ing length can be perfectly discriminative but not useful for
+evaluation purposes.
+
+in this study we want to investigate how useful is to eval-
+uate measures in terms of a basic, intuitive set of formal
+constraints. According to this, our ﬁrst meta-evaluation cri-
+terion is the ability to satisfy the stated formal constraints.
+After that formal analysis, and in order to compare mea-
+sures empirically over data sets, we will assume that current
+standard measures used by the community are, to a certain
+extent, reliable: we assume that all of them give some use-
+ful information about system quality in certain scenarios.
+The problem is that, in most cases, we do not know exactly
+the real scenarios in which the system will be employed. In
+previous experiments, particularly in the case of clustering
+and ﬁltering, it has been shown that there can be a very
+low correlation between measure results [3]. Therefore, we
+cannot expect to ﬁnd a measure which is correlated with all
+of them. However, we can at least ensure that a high score
+according to the measure implies a high score according to
+all measures. This is strictness. In other words, a good score
+in a reliable measure should ensure a good system regard-
+less of the environmental conditions. Note that strictness
+itself is not enough as a meta-evaluation criterion (a mea-
+sure that always scores zero is the strictest of all). Note
+also that strictness could easily be achieved by computing a
+harmonic mean of the most popular measures, but we would
+have to solve scale-normalization issues and we would end
+
+up with a measure that would be hard to interpret, and
+would not cover all quality aspects in an homogeneous man-
+ner. Therefore, and ad-hoc combination of metrics is not
+the best solution to have a strict measure.
+
+Let us quantify Strictness in the following way: we com-
+pute, for each measure, all the rank positions obtained by
+each system output o ∈ O for each topic and measure. Then
+we deﬁne strictness as the largest diﬀerence between a high
+rank assigned by our measure and a low rank assigned by a
+traditional measure:
+
+Strictness(m) = − M axo,m(cid:48) (Rankm(o) − Rankm(cid:48) (o))
+
+|O|
+
+In order to maintain a correspondence with standard meta-
+evaluation criteria, we will also compute the robustness of
+measures in terms of the average Spearman correlation of
+system scores across topics. Being Rnk(m, ti) the ranking
+of systems produced by metric m for topic ti:
+
+Robustness(m) = Avgi,j(Spearman(Rnk(m, ti), Rnk(m, tj)))
+
+We now discuss each of the subsumed tasks.
+
+4.2 Clustering Scenario
+
+In the non overlapped clustering scenario where all doc-
+uments has the same weight, R and S turn into Bcubed
+Precision and Bcubed Recall:
+
+RX ,G ≡ AvgdP (r(d, d
+SX ,G ≡ AvgdP (r(d, d
+(cid:48)
+
+(cid:48)
+
+(cid:48)
+
+) ∈ G|r(d, d
+) ∈ X|r(d, d
+
+) ∈ X ) = BR(X)
+) ∈ G) = BR(X)
+(cid:48)
+
+Bcubed measures are the only ones that satisfy all the clus-
+tering constraints [2]. However, in the extended version for
+overlapping clustering, the Cluster Size vs Quantity restric-
+tion is no longer satisﬁed. This is due to the fact that, in the
+extended Bcubed version, all the relationships from one doc-
+ument are computed as a single unit, even when it belongs
+to several clusters at the same time. The result is that if two
+documents d and d(cid:48) are related to each other several times
+(e.g. they share more than one information nugget), break-
+ing all these relationships is penalized only once. Therefore,
+splitting n clusters can have less eﬀect than splitting one
+document from a cluster with size n. The solution provided
+by R and S consists of considering the document in each
+diﬀerent cluster as a separate document. BCubed measures
+are well-known and have already been studied formally and
+empirically and compared with other measures in previous
+work [2]. Therefore, we will focus on the other subsumed
+tasks for our meta evaluation.
+
+649Accuracy Utility Lam% F Measure
+
+Rob.
+Strict.
+
+0.3
+-0.91
+
+0.39
+-0.91
+
+0.38
+-0.96
+
+0.49
+-0.92
+
+R*S
+0.70
+-0.78
+
+Table 7: Robustness and Strictness achieved by Fil-
+tering Evaluation Measures, WEPS2 test set
+
+4.3 Document Filtering Task
+
+4.3.1 Formal Constraints
+The Filtering scenario consists of distributing a ﬁnite set
+of documents into two priority levels (binary classiﬁcation).
+Being Xr and Gr the sets of prioritized documents in the
+system output and gold standard respectively, the correct
+relationships in the system output are priority relationships
+between relevant documents in Xr and irrelevant documents
+in ¬Xr. Therefore, R corresponds with:
+
+R(X) = AvgdP (rg(d, d(cid:48))|rx(d, d(cid:48))) =
+
+P (Gr|Xr)P (Xr)P (¬Gr|¬Xr) + P (¬Gr|¬Xr)P (¬Xr)P (Gr|Xr) =
+P (¬Gr|¬Xr)P (Gr|Xr)(P (Xr) + P (¬Xr)) = P (¬Gr|¬Xr)P (Gr|Xr)
+This corresponds with the product of precisions over pos-
+itive and negative sets in the output. Analogously, Sensitiv-
+ity corresponds with the product of Recalls over the positive
+and negative sets.
+
+S(X) = P (¬Xr|¬Gr)P (Xr|Gr)
+
+Just like any other ﬁltering measure, the combination of R
+and S (using the F measure) satisﬁes the priority constraint.
+Let us denotate the harmonic mean of R and S as R*S. With
+respect to how R*S scores non-informative outputs, its be-
+havior is a mixture of the other measure families: it assigns
+a zero-score to the all-relevant and all-irrelevant baselines,
+because they are not able to distinguish any useful priority
+relationship between documents. Other arbitrary partitions
+receive scores that depend on how the ground truth parti-
+tions the test set.
+
+4.3.2 Empirical meta-evaluation
+For the ﬁltering scenario we employ the evaluation cor-
+pus and system results from the second task in the WePS3
+competition [1]. The task consisted of classifying Twitter
+entries [17] that contain a company name as relevant when
+they do refer to the company and irrelevant otherwise. The
+test set includes tweets for 47 companies and the training
+set includes 52 company names. For each company, around
+400 tweets were retrieved using the company name as query.
+The ratio of related tweets per company name is variable,
+covering both extremely low and high ratios. We will refer
+to a company tweet set retrieved by a query in a time slot
+as an input stream or topic. Five research teams partici-
+pated in the competition, and sixteen runs were evaluated.
+The organizers included two baseline systems: the placebo
+system (all true) and its opposite (all false).
+
+Figure 1 shows the correspondence between R*S and stan-
+dard measures employed in diﬀerent evaluation campaigns;
+F represents the harmonic mean of precision and recall over
+the positive class. The most relevant fact is that a high
+score in all standard measures is necessary to achieve a high
+score according to R*S. Table 7 shows the Robustness and
+strictness of measures (see Section 4.1) in this test set. The
+strictest measure is R*S (-0.78), followed by Lam% (-0.89).
+
+The measures F, Utility and Accuracy achieve -0.92 of Strict-
+ness. There exists a clear diﬀerence in robustness between
+R*S and other measures. In this scenario, robustness seems
+to be correlated with strictness.
+4.4 Document Retrieval
+
+4.4.1 Formal Constraints
+Just like MAP and DCG, Reliability and Sensitivity sat-
+isfy the ﬁrst two constraints, Priority and Deepness. Adding
+an incorrect relationship produces a score decrease, and the
+eﬀect of an incorrect relationship depends on the deepness of
+the related documents in the system output ranking. How-
+ever, unlike MAP or DCG, Reliability and Sensitivity also
+satisfy the third constraint, Deepness Threshold. And, un-
+like MRR, they also satisfy the fourth constraint, Closeness
+Threshold. Due to space constraints, we do not include here
+the formal proofs.
+
+Note that the parameters n and Wn oﬀer great ﬂexibil-
+ity, and permit to accomodate scenarios where only the top
+documents in the rank matter (as in Web search) as well
+as recall-oriented scenarios, simply adjusting the parame-
+ters accordingly. The formal constraints are satisﬁed for any
+paratemer setting. For example, with the setting W30 = 0.8,
+ranking 30 relevant documents after 30 irrelevant documents
+is worse than retrieving one document in the ﬁrst position,
+but retrieving ﬁve relevant documents in the ﬁrst 10 posi-
+tions is better than retrieving only one document at the top
+1. The cut point is n=20.
+
+As for the conﬁdence constraint, note that the more we
+include irrelevant documents in the ranking, the more we in-
+clude incorrect priority relationships between the priorized
+documents and the long tail. We could also satisfy this prop-
+erty with measures like RBP by using a discounting score
+for each irrelevant document, but then the nature of RBP
+would change and its formal properties would not hold any
+longer. Table 6 summarizes the results of the formal con-
+straint analysis.
+4.4.2 Empirical Meta-evaluation
+We have used queries 701 to 750 in the GOV-2 collection,
+which were employed in the TREC 2004 Terabyte Track.
+The GOV-2 corpus consists of approximately 25 million doc-
+uments. Therefore, we can assume that the amount of doc-
+uments in the collection is unlimited for practical purposes.
+Relevant documents were manually annotated for each query.
+We consider the results of 60 retrieval systems developed by
+the participants in the track. Two relevance levels (high and
+medium) were considered in the human annotation.
+
+Table 8 shows the strictness and robustness3 of measures.
+We consider the strictness of all measures against the stan-
+dard measures MAP, DCP, P@10, MRR, RBPp=0.8 and
+RBPp=0.95. The strictest measure is R*S with W80 = 30
+(-0.58) followed by MRR (-0.63), MAP (-0.74) and P@10 (-
+0.75). However, R*S with W80 = 30 achieves low robustness,
+while R*S with n80 = 800 and DCG have higher robustness
+at the cost of strictness. It seems that there is a trade-oﬀ
+between strictness and robustness. A possible explanation
+is that the robustness of measures across test cases depends
+on the amount of data that is considered for the evalua-
+
+3Discriminating systems that return short rankings is easy.
+In order to avoid this noise, we only consider in this test
+those systems that return at least 1000 documents
+
+650Measure
+
+MAP DCG P@10 MRR
+
+Robustness
+Strictness
+
+0.55
+-0.89
+
+0.60
+-0.68
+
+0.3
+-0.76
+
+0.4
+-0.63
+
+RBP
+p=0.8
+0.28
+-0.92
+
+R*S
+
+RBP
+R*S
+p=0.95 W30 W800
+0.57
+-0.73
+
+0.35
+-0.58
+
+0.39
+-0.65
+
+Table 8: Robustness and strictness of Document Retrieval Evaluation Measures, GOV2 test set.
+
+System Output 1
+d1{d2 d3 d4}
+{d4 d5}{d6 d7}
+
+d6 d7
+
+R≺(cid:31)=1 S≺(cid:31)=1
+R∼=1 S∼=0.97
+System Output 3
+{d4 d5} {d6 d7}
+
+d1 {d3 d4 }
+{d6 d7}
+
+R≺(cid:31)=1 S≺(cid:31)=0.86
+
+R∼=1 S∼=0.74
+System Output 5
+{d4 d5} {d6 d7}
+d1 {d2 d3 d4}
+
+{d6 d7}
+
+Gold Standard
+d1 {d2 d3 d4}
+{d4 d5} {d6 d7}
+
+{d6 d7}
+
+R≺(cid:31)=1 S≺(cid:31)=1
+
+R∼=1 S∼=1
+System Output 2
+d1 {d2 d3}{ d4}
+{d4 d5} {d6 d7}
+
+{d6 d7}
+
+R≺(cid:31)=1 S≺(cid:31)=1
+R∼=1 S∼=0.8
+d1 {d3 d4 }
+{d6 d7 d8}
+
+System Output 4
+{d4 d5} {d6 d7}
+
+R≺(cid:31)=0.95 S≺(cid:31)=0.85 R≺(cid:31)=0.64 S≺(cid:31)=0.59
+
+R∼=0.96 S∼=0.74
+
+R∼=1 S∼=1
+
+Table 9: Sensitivity and Reliability examples for the
+generic Document Organization scenario.
+
+tion. Therefore, measures focused on the top of the ranking
+are less robust. Given that the max function in the strict-
+ness deﬁnition is very sensitive to outlier systems, we have
+also computed strictness considering the 10 maximum dif-
+ferences; results were the same.
+
+5. GENERIC DOCUMENT ORGANIZATION
+
+SCENARIO
+
+As far as we know, there is no measure that can be di-
+rectly compared with R*S in the generic document organi-
+zation scenario as we have deﬁned it.
+In this section, we
+illustrate the behavior of R*S across several instances of
+system outputs. See Table 9. The gold standard consists
+of seven relevant documents distributed along three priority
+levels. Each priority level contains two clusters (or informa-
+tion nuggets) and documents 4,6 and 7 appear in two clusters
+and priority levels simultaneously. The Reliability and Sen-
+sitivity over priority and clustering relationships have been
+computed with W10 = 0.8, i.e., we require that the ﬁrst 10
+occurrences represent 80% of the score.
+
+Of course, Reliability and Sensitivity are maximal for the
+gold standard. Starting from this, we can identify in the ta-
+ble the following behaviors: (System 1) breaking clusters at
+low priority levels decreases slightly S∼, (System 2) break-
+ing clusters at high priority levels decreases S∼ to a greater
+extent; (System 3) Removing one document (d2) decreases
+priority and clustering sensitivity; (System 4) removing and
+adding noisy documents (d2 and d8) decreases both sensi-
+tivity and reliability scores and in (System 5) we swap all
+priority levels. Then, clustering is perfect and the prior-
+ity R and S decrease, but not to zero. Notice that the 10
+ﬁrst documents have only a 80% of weight in the evaluation.
+There exists a long tail of documents from which this set is
+priorized.
+
+6. CONCLUSIONS
+
+In this paper we have discussed how some prominent Infor-
+mation Access tasks – Document Retrieval, Clustering and
+Filtering – can be subsumed under a generic Document Or-
+ganization task that establishes two kinds of binary relation-
+ships between documents: relatedness (which forms clusters)
+and priority (ranking). We have then introduced two evalu-
+ation measures for the document organization problem: Re-
+liability and Sensitivity, which are precision and recall of the
+predicted set of relationships with respect to the true rela-
+tionships, with a speciﬁc relative weighting scheme between
+relations. The main contribution of this paper is that R and
+S can be applied to complex tasks which involve ranking,
+clustering and ﬁltering at the same time. An example task
+is online reputation monitoring, where systems have to (i)
+ﬁlter out irrelevant information, (ii) organize relevant infor-
+mation in topics, and (iii) decide which topics have more
+priority from the point of view of reputation management.
+R and S are able to provide a unique evaluation measure for
+this combined problem.
+
+In addition, R and S satisfy all formal constraints in each
+of the subsumed tasks; in particular, they satisfy more for-
+mal constraints than any previous measure in the Document
+Retrieval task, and they are able to accomodate several re-
+trieval scenarios (from precision-oriented to recall-oriented)
+via two parameters that establish that the ﬁrst n levels in
+the rank carry on a fraction Wn of the overall quality score.
+Our empirical study indicates that R and S are stricter than
+standard measures, i.e., a high result with R and S ensures
+a high result with any other standard measure in all the
+subsumed tasks. That makes R and S a preferable choice in
+cases where the application scenario does not clearly point
+towards any of the previously existing measures, because it
+guarantees that a good result will still hold according to any
+other standard measure.
+
+For its application to combined tasks, future work involves
+extending the set of binary relations – the general principle
+of R and S can be applied to any kind of relations – together
+with a a careful analysis on how to assign relative weights to
+diﬀerent types of relations; for instance, in certain applica-
+tion scenarios one type of relation (priority or relatedness)
+may dominate and obscure what is going on with the other,
+making R and S less transparent and/or useful.
+
+Code to use R and S is available at http://nlp.uned.es.
+
+Acknowledgments
+This work has been partially funded by EU FP7 project
+Limosine (grant number 288024), a Google Faculty Research
+Award (Axiometrics, project Holopedia (grant from the Span-
+ish goverment) and project MA2VICMR (grant from the
+government of Comunidad de Madrid).
+
+6517. REFERENCES
+[1] E. Amig´o, J. Artiles, J. Gonzalo, D. Spina, B. Liu, and
+A. Corujo. WePS3 Evaluation Campaign: Overview of
+the On-line Reputation Management Task. In 2nd
+Web People Search Evaluation Workshop (WePS
+2010), CLEF 2010 Conference, Padova Italy, 2010.
+[2] E. Amig´o, J. Gonzalo, J. Artiles, and F. Verdejo. A
+comparison of extrinsic clustering evaluation metrics
+based on formal constraints. Inf. Retr., 12:461–486,
+August 2009.
+
+evaluation of ir techniques. ACM Trans. Inf. Syst.,
+20:422–446, October 2002.
+
+[17] B. Krishnamurthy, P. Gill, and M. Arlitt. A few chirps
+
+about twitter. In WOSP ’08: Proceedings of the ﬁrst
+workshop on Online social networks, pages 19–24, New
+York, NY, USA, 2008. ACM.
+
+[18] A. Leuski. Evaluating document clustering for
+
+interactive information retrieval. In CIKM, pages
+33–40, 2001.
+
+[19] M. Meila. Comparing clusterings. In Proceedings of
+
+[3] E. Amig´o, J. Gonzalo, and F. Verdejo. A comparison
+
+COLT 03, 2003.
+
+[20] T. M. Mitchell. Machine learning. McGraw Hill, New
+
+York, 1997.
+
+[21] A. Moﬀat and J. Zobel. Rank-biased precision for
+
+measurement of retrieval eﬀectiveness. ACM Trans.
+Inf. Syst., 27(1):2:1–2:27, Dec. 2008.
+
+[22] A. Rosenberg and J. Hirschberg. V-measure: A
+
+conditional entropy-based external cluster evaluation
+measure. In Proceedings of EMNLP-CoNLL 2007,
+pages 410–420, 2007.
+
+[23] M. D. Smucker and C. L. Clarke. Time-based
+
+calibration of eﬀectiveness measures. In Proceedings of
+the 35th international ACM SIGIR conference on
+Research and development in information retrieval,
+SIGIR ’12, pages 95–104, New York, NY, USA, 2012.
+ACM.
+
+[24] S. Vargas and P. Castells. Rank and relevance in
+
+novelty and diversity metrics for recommender
+systems. In 5th ACM Conference on Recommender
+Systems (RecSys 2011), pages 109–116, Chicago,
+Illinois, October 2011.
+
+[25] E. M. Voorhees. The trec-8 question answering track
+
+report. In In Proceedings of TREC-8, pages 77–82,
+1999.
+
+of evaluation metrics for document ﬁltering. In
+Proceedings of CLEF’11, CLEF’11, pages 38–49,
+Berlin, Heidelberg, 2011. Springer-Verlag.
+
+[4] C. Buckley and E. M. Voorhees. Retrieval evaluation
+
+with incomplete information. In Proceedings of the
+27th annual international ACM SIGIR conference on
+Research and development in information retrieval,
+SIGIR ’04, pages 25–32, New York, NY, USA, 2004.
+ACM.
+
+[5] B. Carterette. System eﬀectiveness, user models, and
+user utility: a conceptual framework for investigation.
+In Proceedings of the 34th international ACM SIGIR
+conference on Research and development in
+Information Retrieval, SIGIR ’11, pages 903–912, New
+York, NY, USA, 2011. ACM.
+
+[6] B. Carterette, E. Kanoulas, and E. Yilmaz. Simulating
+
+simple user behavior for system eﬀectiveness
+evaluation. In CIKM, pages 611–620, 2011.
+
+[7] O. Chapelle and Y. Zhang. A dynamic bayesian
+network click model for web search ranking. In
+WWW, pages 1–10, 2009.
+
+[8] J. M. Cigarr´an, A. Pe˜nas, J. Gonzalo, and F. Verdejo.
+
+Automatic selection of noun phrases as document
+descriptors in an fca-based information retrieval
+system. In ICFCA, pages 49–63, 2005.
+
+[9] C. L. A. Clarke, M. Kolla, G. V. Cormack,
+
+O. Vechtomova, A. Ashkan, S. B¨uttcher, and
+I. MacKinnon. Novelty and diversity in information
+retrieval evaluation. In SIGIR, pages 659–666, 2008.
+
+[10] J. Cohen. A Coeﬃcient of Agreement for Nominal
+
+Scales. Educational and Psychological Measurement,
+20(1):37, 1960.
+
+[11] G. Cormack and T. Lynam. Trec 2005 spam track
+
+overview. In Proceedings of the fourteenth Text
+Retrieval Conference 8TREC 2005), 2005.
+
+[12] G. V. Cormack and T. R. Lynam. TREC 2005 Spam
+Track Overview. In Proceedings of the fourteenth Text
+REtrieval Conference (TREC-2005), 2005.
+
+[13] M. Halkidi, Y. Batistakis, and M. Vazirgiannis. On
+
+Clustering Validation Techniques. Journal of
+Intelligent Information Systems, 17(2-3):107–145,
+2001.
+
+[14] M. A. Hearst and J. O. Pedersen. Reexamining the
+
+cluster hypothesis: Scatter/gather on retrieval results.
+pages 76–84, 1996.
+
+[15] B. Hu, Y. Zhang, W. Chen, G. Wang, and Q. Yang.
+
+Characterizing search intent diversity into click
+models. In Proceedings of the 20th international
+conference on World wide web, WWW ’11, pages
+17–26, New York, NY, USA, 2011. ACM.
+
+[16] K. J¨arvelin and J. Kek¨al¨ainen. Cumulated gain-based
+
+652

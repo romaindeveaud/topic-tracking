@@ -1,0 +1,136 @@
+Diversity and Novelty in Information Retrieval
+
+Rodrygo L. T. Santos
+
+Univ. Federal de Minas Gerais
+
+Belo Horizonte, MG, Brazil
+rodrygo@dcc.ufmg.br
+
+Ismail Sengor Altingovde
+Middle East Technical University
+
+Ankara, Turkey
+
+altingovde@ceng.metu.edu.tr
+
+Pablo Castells
+
+Univ. Autónoma de Madrid
+
+Madrid, Spain
+
+pablo.castells@uam.es
+
+Fazli Can
+
+Bilkent University
+Ankara, Turkey
+
+canf@cs.bilkent.edu.tr
+
+ABSTRACT
+This tutorial aims to provide a unifying account of current
+research on diversity and novelty in diﬀerent IR domains,
+namely, in the context of search engines, recommender sys-
+tems, and data streams.
+
+Categories and Subject Descriptors
+H.3.3 [Information Storage and Retrieval]: Information
+Search and Retrieval—search process
+
+Keywords
+Relevance, Diversity, Novelty, Ambiguity, Redundancy
+
+1. OVERVIEW
+
+Information retrieval has been traditionally approached as
+a pursuit of relevant information, under the assumption that
+the users’ information needs are unambiguously conveyed by
+their information requests. While such an assumption may
+have arguably held in the library setting where the early
+studies of relevance-oriented ranking were conducted, it does
+not hold in general, and it is unlikely to hold in particular for
+the multitude of users’ needs in modern information retrieval
+systems, such as search engines and recommender systems.
+In order to identify relevant information under the uncer-
+tainty posed by the users’ requests, an eﬀective approach is
+to diversify the retrieved results. By doing so, an IR sys-
+tem can minimise the chance of wrongly guessing the users’
+needs, which may cause the users to abandon their retrieval
+task.
+
+Through a stream of active research and experiences, di-
+versity and novelty can be said to have by now consolidated
+into a signiﬁcant body of techniques, methodologies, the-
+ories, and knowledge in the ﬁeld of information retrieval.
+This tutorial aims to provide a unifying account of current
+research on diversity and novelty in diﬀerent IR domains. In
+
+Permission to make digital or hard copies of part or all of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for proﬁt or commercial advantage and that copies
+bear this notice and the full citation on the ﬁrst page. Copyrights for third-
+party components of this work must be honored. For all other uses, contact
+the owner/author(s).
+Copyright is held by the owner/author(s).
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+ACM 978-1-4503-2034-4/13/07.
+
+particular, we will cover the motivations, as well as the most
+established approaches for producing and evaluating diverse
+results in the context of search engines, recommender sys-
+tems, and data streams. By contrasting the state-of the-art
+in these multiple domains, this tutorial aims to derive a
+common understanding of the diversiﬁcation problem and
+the existing solutions, their commonalities and diﬀerences,
+as a means to foster new research directions.
+
+In particular, the tutorial attendees will:
+• understand the importance and complexities of achiev-
+
+ing diversity/novelty for various IR domains;
+
+• learn the state-of-the-art approaches for diversity/novelty
+
+in search results, documents and streaming data, and
+recommender systems;
+
+• learn the fundamental evaluation metrics and have an
+
+overview of past and current evaluation campaigns
+
+• get an overview of other related application areas that
+include query suggestions, image search, aggregated
+search, spatial object retrieval;
+
+• obtain a uniﬁed view of the topic as a take-away mes-
+sage;
+i.e., the connections between various methods
+employed in diﬀerent domains as well as the diﬀerences
+between them.
+
+2. TUTORIAL OUTLINE
+
+1. Practical and Theoretical Background
+
+2. Diversity in Search
+
+• Implicit and Explicit Diversiﬁcation Approaches
+• Diversity Evaluation
+
+3. Diversity in Recommendation
+
+• Problem Statement
+• Novelty and Diversity Enhancement
+• Novelty and Diversity Evaluation
+
+4. Diversity in Documents and Streams
+
+• Document-level Novelty
+• Novelty and Diversiﬁcation of Document Streams
+• Evaluation
+
+5. Other Application Areas
+
+1130

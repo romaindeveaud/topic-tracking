@@ -1,0 +1,127 @@
+Internet Advertising: Theory and Practice
+
+Bin Gao
+
+Jun Yan
+
+Microsoft Research Asia
+
+13F, Bldg 2, No. 5, Danling St
+Beijing, 100080, P. R. China
+bingao@microsoft.com
+
+Microsoft Research Asia
+
+13F, Bldg 2, No. 5, Danling St
+Beijing, 100080, P. R. China
+junyan@microsoft.com
+
+Dou Shen
+Baidu Inc.
+
+Beijing, 100085, P. R. China
+
+doushen@live.com
+
+Tie-Yan Liu
+
+Microsoft Research Asia
+
+13F, Bldg 2, No. 5, Danling St
+Beijing, 100080, P. R. China
+
+tyliu@microsoft.com
+
+ABSTRACT
+Internet advertising, a form of advertising that utilizes the
+Internet to deliver marketing messages and attract customers,
+has seen exponential growth since its inception around twenty
+years ago; it has been pivotal to the success of the World
+Wide Web. The dramatic growth of internet advertising
+poses great challenges to information retrieval, machine learn-
+ing, data mining and game theory, and it calls for novel tech-
+nologies to be developed. The main purpose of this work-
+shop is to bring together researchers and practitioners in
+the area of Internet Advertising and enable them to share
+their latest research results, to express their opinions, and
+to discuss future directions.
+
+Categories and Subject Descriptors
+H.3.5 [Information Systems]: Information Storage and
+Retrieval - On-line Information Services
+
+billions of keywords, tens of millions of ads, billions of users,
+millions of advertisers where events such as clicks and ac-
+tions can be extremely rare. For such a complex problem,
+conventional technologies and evaluation methodologies are
+not suﬃcient. With the dramatically developing Internet
+advertising industry, it is the right time to organize a work-
+shop to share and discuss the new thoughts, algorithms, and
+theories in this area.
+
+Internet advertising is one of the most important moneti-
+zation engines of the Internet. It is highly associated with
+many IR applications such as web portals, search engines,
+social networks, e-commerce, mobile networks and apps, etc.
+Researchers in information retrieval, machine learning, data
+mining, and game theory are developing creative ideas to
+advance the technologies in this area.
+
+2. TOPICS AND THEMES
+
+Possible topics and themes include but not limited to:
+
+General Terms
+Algorithms, Experimentation, Theory
+
+Keywords
+Computational advertising, information retrieval, game the-
+ory.
+
+1. MOTIVATION
+
+Internet advertising is a complex problem.
+
+It contains
+multiple parties including advertisers, users, publishers, ad
+agencies, and ad platforms such as ad exchanges. It is highly
+dynamic in terms of the rapid change of user information
+needs, non-stationary bids of advertisers, and the frequent
+modiﬁcations of ads campaigns. It is very large scale, with
+
+Permission to make digital or hard copies of part or all of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for proﬁt or commercial advantage and that copies
+bear this notice and the full citation on the ﬁrst page. Copyrights for third-
+party components of this work must be honored. For all other uses, contact
+the owner/author(s).
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+ACM 978-1-4503-2034-4/13/07.
+
+1. Machine learning for internet advertising: (i)
+Learning to predict ad click-through rate, (ii) Learn-
+ing to rank for ads display, (iii) Learning to predict
+advertiser behaviors, (iv) Learning to compute ad rel-
+evance.
+
+2. Data mining for internet advertising: (i) Mining
+online retailer logs for recommender systems, (ii) Min-
+ing search ads logs for improving ad relevance, click-
+through rate prediction, and evaluation, (iii) Mining
+user behavior logs for behavioral targeting, (iv) Min-
+ing Web knowledge for online advertising.
+
+3. Game theory for internet advertising: (i) Mech-
+anism design for sponsored search, display ads, so-
+cial network advertising, etc., (ii) Advertiser behavior
+modeling and user behavior modeling.
+
+4. Other Topics in Advertising and Internet Eco-
+nomics: (i) Ad exchanges and real-time bidding, (ii)
+Fraud detection in ad clicks, (iii) Search engine mar-
+keting (SEM), (iv) Advertising on social networks, mo-
+biles, games, etc., (v) Privacy preserving, (vi) Ad per-
+sonalization, (vii) Context aware ad recommendation,
+(viii) Case studies for Internet advertising.
+
+1135

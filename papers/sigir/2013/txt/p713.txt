@@ -1,0 +1,2342 @@
+Cache-Conscious Performance Optimization for
+
+Similarity Search
+
+Maha Alabduljalil, Xun Tang, Tao Yang
+
+Department of Computer Science
+
+University of California, Santa Barbara
+{maha,xtang,tyang}@cs.ucsb.edu
+
+ABSTRACT
+All-pairs similarity search can be implemented in two stages.
+The ﬁrst stage is to partition the data and group poten-
+tially similar vectors. The second stage is to run a set of
+tasks where each task compares a partition of vectors with
+other candidate partitions. Because of data sparsity, access-
+ing feature vectors in memory for runtime comparison in the
+second stage, incurs signiﬁcant overhead due to the presence
+of memory hierarchy. This paper proposes a cache-conscious
+data layout and traversal optimization to reduce the execu-
+tion time through size-controlled data splitting and vector
+coalescing.
+It also provides an analysis to guide the opti-
+mal choice for the parameter setting. Our evaluation with
+several application datasets veriﬁes the performance gains
+obtained by the optimization and shows that the proposed
+scheme is upto 2.74x as fast as the cache-oblivious baseline.
+
+Categories and Subject Descriptors
+H.3.3 [Information Search and Retrieval ]: Search Pro-
+cess, Clustering; H.3.4 [Systems and Software]: Perfor-
+mance evaluation
+
+Keywords
+Similarity search, data traversal, memory hierarchy
+
+1.
+
+INTRODUCTION
+
+All Pairs Similarity Search (APSS) [6], which identiﬁes
+similar objects among a given dataset, has many important
+applications. For example, collaborative ﬁltering provides
+recommendations by determining which users have similar
+tastes [29, 7], search query suggestions identiﬁes queries with
+similar search results [22], web mirrors and plagiarism recog-
+nition [25], coalition detection for advertisement frauds [20],
+query suggestions [22], spam detection [8, 16, 14], cluster-
+ing [5], and ﬁnally near duplicate detection [12, 30].
+
+The complexity of a na¨ıve APSS can be quadratic to the
+dataset size. Previous research on expediting similarity com-
+puting, developed ﬁltering methods to eliminate unnecessary
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for proﬁt or commercial advantage and that copies bear this notice and the full cita-
+tion on the ﬁrst page. Copyrights for components of this work owned by others than
+ACM must be honored. Abstracting with credit is permitted. To copy otherwise, or re-
+publish, to post on servers or to redistribute to lists, requires prior speciﬁc permission
+and/or a fee. Request permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+computations [6, 28, 2], applied inverted indexing to com-
+pare vectors only when they share features [18, 21], and
+used partitioning and parallelization techniques [1]. The
+LSH based mapping can approximately map vectors to the
+same bucket when they are potentially similar. However,
+none of the previously developed methods have considered
+the impact of memory hierarchy on execution time. The
+main memory access latency can be 10 to 100 times slower
+than the L1 cache latency. Thus, the unorchestrated slow
+memory access can signiﬁcantly impact performance.
+
+In this paper, we exploit memory hierarchy and develop
+orthogonal techniques to improve the eﬃciency of APSS by
+optimizing data layout and traversal methods. Speciﬁcally,
+we investigate how data traversal aﬀects the use of mem-
+ory layers. This method is also motivated by the work in
+query processing [23] and sparse matrix computation that
+considers cache optimization in computation arrangement.
+Similarity comparisons can be performed through a num-
+ber of tasks where each of them compares a partition of
+vectors with other candidate vectors [1].
+
+We propose two algorithms PSS1 and PSS2 to exploit the
+memory hierarchy explicitly. PSS1 splits the data hosted in
+the memory of each task to ﬁt into the processor’s cache and
+PSS2 coalesces data traversal based on a length-restricted in-
+verted index. We provide an analytic cost model and iden-
+tify the parameter values that optimize the performance.
+Hence, the contribution of this paper is a memory-hierarchy
+aware framework for fast similarity comparison with opti-
+mized data layout and traversal.
+
+The rest of this paper is organized as follows. Section 2
+reviews background and related work. Section 3 discusses
+the design framework and PSS1 algorithm for cache-aware
+data splitting. Section 4 analyzes cost model of PSS1 and
+demonstrates the impact of the parameters on memory ac-
+cess performance. Section 5 presents the optimization using
+vector coalescing named PSS2. Section 6 is our experimental
+evaluation that assess PSS1 and PSS2. Section 7 concludes
+this paper.
+
+2. BACKGROUND AND RELATED WORK
+Following the deﬁnition in [6], the APSS problem is de-
+ﬁned as follows. Given a set of vectors di = {wi,1, wi,2,
+··· , wi,m}, where each vector contains at most m non-negative
+features and is normalized to a unit length, then the cosine-
+based similarity between two vectors is computed as:
+
+Sim(di, dj) =￿t∈(di∩dj )
+
+wi,t×wj,t.
+
+713Two vectors x, y are considered similar if their similar-
+ity score exceeds a threshold τ , namely Sim(x, y) ≥ τ . The
+time complexity of APSS is high, especially for a big dataset.
+There are application-speciﬁc methods applied to reduce the
+complexity. For example, text mining removes stop-words or
+extremely high frequent features [18]. We use such prepro-
+cessing throughout the experiments in Section 6. Generally,
+there are two groups of optimization techniques developed
+in the previous work to accelerate APSS.
+
+• Dynamic computation ﬁltering. Partially accu-
+mulated similarity scores can be monitored at runtime
+and dissimilar pair of documents can be detected dy-
+namically based on the given similarity threshold with-
+out the complete derivation of the total similarity value
+[6, 28, 21] .
+
+• Similarity-based grouping in data preprocess-
+ing. The search scope for similarity can be reduced
+when potentially similar vectors are placed in one group.
+One approach is to use inverted indexing [28, 18, 21]
+developed for information retrieval [5]. This approach
+identiﬁes vectors that share at least one feature, as
+potentially similar. Hence, it skips unnecessary data
+traversal while conducting APSS. Another approach is
+LSH that can approximately map similar vectors into
+one group [11, 26]. This approach has a tradeoﬀ be-
+tween precision, recall ratio, and redundant computa-
+tions when using multiple hash functions. The study
+in [2] shows that exact comparison algorithms can de-
+liver performance competitive to LSH when computa-
+tion ﬁltering are used.
+Another approach is partition-based search [1] which
+statically identiﬁes dissimilar vectors to guide data group-
+ing. Runtime computation avoids the comparison among
+dissimilar vectors.
+
+Cache optimization for computationally intensive applica-
+tions is studied in the context of general database query pro-
+cessing [23, 19] and matrix-based scientiﬁc computing [10,
+9, 27, 4]. Motivated by these studies, we investigate the op-
+portunities of cache-conscious optimization targeting APSS.
+
+3. FRAMEWORK AND CACHE-AWARE
+
+DATA SPLITTING
+
+In this section, we give an overview of the partition-based
+comparison framework [1] and then present the caching op-
+timization strategies as our contributions.
+3.1 Framework and basic algorithm
+
+The framework for partition-based similarity search (PSS)
+consists of two steps. The ﬁrst step is to divide a dataset
+into a set of partitions. During this process, the dissimilarity
+relationship among partitions is identiﬁed so that unneces-
+sary comparisons among them are avoided. The second step
+is to assign a partition to a task and each task compares this
+partition with other potentially similar partitions.
+
+Dissimilarity-based partitioning identiﬁes dissimilar vec-
+tors as much as possible without explicitly computing the
+product of their features. One approach is to use the fol-
+lowing inequality that uses the 1-norm and ∞-norm of each
+vector.
+
+Sim(di, dj) ≤ min(||di||∞||dj||1,||dj||∞||di||1) < τ.
+
+τ
+
+||dj||∞
+
+The partitioning algorithm sorts the vectors based on their
+1-norm values and uses the sorted list to identify dissimi-
+lar pairs (di, dj) in complexity O(n log n) satisfying the in-
+equality ￿di￿1 <
+. A diﬀerent τ value would aﬀect
+the outcome of the dissimilarity detection in the above par-
+titioning. The details for the above static partitioning is
+discussed in [1]. This paper focuses on optimizing the task
+execution after the static partitioning is applied. Note that
+this scheme can also be applied with LSH when approxima-
+tions are allowed. When vectors are mapped into a set of
+dissimilar buckets using LSH, some buckets can still be big
+and the static partitioning can be further applied to divide
+such buckets.
+
+Figure 1: A PSS task compares the assigned partition A
+with other partitions O.
+
+Figure 1 depicts a task for partition-based similarity search
+interacting with a CPU core with multiple levels of cache.
+Two or three cache levels are typical in today’s Intel or AMD
+architecture [17, 15]. We assume that the assigned partition
+A ﬁts the memory of one machine as the data partitioning
+can be adjusted to satisfy such an assumption. But vectors
+of O can exceed memory and need to be fetched gradually
+from a local or remote storage. In a computer cluster with
+the distributed ﬁle system such as Hadoop, a task can seam-
+lessly fetch data from the ﬁle system without worrying about
+the machine location of data.
+
+The memory used by each task has three areas, as illus-
+trated in Figure 1. 1) Area S: hosts the assigned partition
+A. 2) Area B: stores a block of vectors fetched from other
+candidate partitions O at each comparison step. 3) Area C:
+stores intermediate results temporarily.
+
+Figure 2 describes the function of a PSS task. Each task
+loads the assigned vectors, whose data structure is in forward
+index format, into area S. Namely, each vector consists of an
+ID along with a list of feature IDs and their corresponding
+weights, stored in a compact manner. After loading the
+assigned vectors, the task inverts them locally within area
+S. It then fetches a number of vectors from O, in forward
+index format, and place them into area B.
+
+Let dj be the vector fetched from O to be processed (Line
+5). For each feature t in dj, PSS uses the inverted index
+in area S to ﬁnd the localized t’s posting (Line 10). Then
+weights of vector di from t’s posting and dj contribute a par-
+tial score towards the ﬁnal similarity score between dj and
+di. After all the features of dj are processed, the similarity
+scores between dj and the vectors in S are validated (Line
+17) and only those that exceed the threshold are written to
+disk. In Compare(S, dj), the dissimilarity of vector di in S
+with dj can be marked (Line 14) by using a negative value
+
+714Task (A, O)
+1: Read all vectors from assigned partition A into S
+2: Build inverted index of these vectors and store in S
+3: repeat
+4:
+5:
+6:
+7: until all vectors in O are fetched
+
+Fetch a set of vectors from O into B
+for dj ∈ B do
+
+Compare (S, dj)
+
+for di ∈ P osting(t) and di is a candidate do
+
+Compare (S, dj)
+8: Initialize array score of size |S| with zeros
+9: rj ← ||dj||1
+10: for t ∈ dj And P osting(t) ∈ S do
+11:
+12:
+13:
+14:
+15:
+16: for i = 1 to |S| do
+17:
+18:
+
+score[i]=score[i]+wi,t×wj,t
+if (score[i]+maxw[di]×rj<τ ) then
+Mark di as non-candidate
+
+rj = rj − wj,t
+if score[i]>τ then
+
+Write (di, dj, score[i])
+
+Figure 2: PSS task.
+
+for score[i]. Array maxw[ ] contains the ∞-norm value of
+vector di.
+3.2 Cache-conscious data splitting
+
+When dealing with a large dataset, the number of vectors
+in each partition is high. Having a large number of vectors
+increase the beneﬁts of using inverted indexing as shown in
+Figure 2. But it has a problem that the accessed areas S
+or C may not ﬁt in the fast cache. In that case, temporal
+locality is not exploited, meaning the second access of the
+same element during any computation will be a cache miss.
+As we show in the next section, this leads to frequent slow
+memory access and a signiﬁcant increase in execution time.
+Since fast access of each area S, B or C is equally important
+in the core computation (Lines 12 and 13), one idea is to let
+area C ﬁt in L1 cache by explicitly dividing vectors of the
+assigned partition in S into a set of splits and have the task
+focus on one split at a time.
+
+Figure 3: A partition in area S is further divided into mul-
+tiple splits for each PSS1 task. Four data items are involved
+in the core computation. The striped area indicates cache
+coverage.
+
+Figure 3 illustrates this cache-conscious data splitting idea.
+The corresponding algorithm called PSS1 is shown in Fig-
+ure 4. First, it divides the hosted vectors in S into q splits.
+Each split Si is of size s. PSS1 then executes q comparison
+sub-tasks. Each sub-task compares vectors from Si with a
+vector bj in B. The access in area C is localized such that
+array score[ ] and maxw[ ] can fully ﬁt in L1 cache. This
+improves temporal locality of data elements for area C and
+
+Task (A, O)
+1: Read and divide A into q splits
+2: Build an inverted index for each split Si and store in S
+3: repeat
+4:
+5:
+6:
+7:
+8: until all vectors in O are fetched
+
+Fetch a set of vectors from O into B
+for dj ∈ B do
+for Si ∈ S do
+
+Compare (Si, dj)
+
+Figure 4: PSS1 task.
+
+reduces the access time by an order of magnitude. The core
+computation speeds up as a result.
+
+The data splitting also introduces potential beneﬁts from
+exploiting the multi-core CPU architecture via threads. Ev-
+ery time a data block from O is fetched into B, there can be
+multiple threads running in parallel to execute Compare(Si,
+dj) where dj is a vector in B.
+
+The question is, how to determine the s value of each split
+so that the caches are best utilized? This is discussed next.
+
+4. COST ANALYSIS AND CACHE PERFOR-
+
+MANCE OF PSS1
+
+We model the total execution time of each PSS1 task
+and analyze how memory hierarchy aﬀects the running time.
+This analysis facilitates the identiﬁcation of optimized pa-
+rameter setting. Table 1 describes the parameters used in
+our analysis. They represent the characteristics of the given
+dataset, algorithm variables, and the system setting.
+
+wd,t
+τ
+k
+
+S, B, C
+n
+s
+b
+Si
+q
+h
+δtotal
+mj(X)
+Dj(X)
+Dj
+ps
+
+pb
+
+Dataset
+
+Weight of feature t in vector d
+Similarity threshold
+Average number of non-zero features in d
+
+Algorithm
+
+Memory usage for each task
+Number of vectors to compare per task (|O|)
+Avg. number of vectors for each split in S
+Number of vectors fetched and stored in B
+A split in area S divided by PSS1
+Number of splits in S
+Cost for t-posting lookup in table
+Cost of accessing the hierarchical memory
+Miss ratio in level j cache for area X
+Number of misses in level j cache for area X
+Total number of access misses in level j cache
+Average posting length in the inverted index
+of each split Si
+Average posting length in the inverted index
+of b vectors in B
+
+Infrastructure
+
+Cache line size
+
+l
+es, eb, ec Element size in S, B, C respectively
+fs, fb, fc Eﬀective prefetch factor for elements in S, B
+
+δ1, δ2, δ3
+δmem
+ψ
+
+and C respectively
+Latency when accessing L1, L2, and L3 cache
+Latency when accessing main memory
+Cost of addition and multiplication
+
+Table 1: Modeling Symbols
+
+7154.1 Task execution time
+
+The total execution time for each task contains two parts:
+I/O and computation. I/O cost occurs for loading the as-
+signed vectors A, fetching other potentially similar vectors,
+and writing similarity pairs to disk storage. Notice that in
+fetching other vectors for comparison, the algorithm always
+fetches a block of vectors to amortize the startup cost of
+I/O. For the datasets we have used, read I/O takes about
+2% of total cost while write I/O takes about 10-15%. Since
+I/O cost is the same for the baseline PSS and our proposed
+schemes, we do not model it in this paper.
+
+For each split, the computation time contains a small over-
+head for the index inversion of its s vectors. Because the
+inverted index is built once and reused every time a parti-
+tion is loaded, this part of computation becomes negligible
+and the comparison time with other vectors dominates. The
+core part (Lines 12, 13 in Figure 2) is computationally in-
+tensive. Following Table 1, h is the cost of looking up the
+posting of a feature appeared in a vector in B. Symbol ps
+is the average length of postings visited in Si (only when a
+common feature exists), so it estimates the number of itera-
+tions for Line 10. Furthermore, there are 4 memory accesses
+in Line 12 and 13, regarding data items score[i], wi,t, wj,t,
+and maxw[di]. Other items, such as rj, and τ , are constants
+within this loop and can be pre-loaded into registers. There
+are 2 pairs of multiplication and addition involved (one in
+Line 12 and one in Line 13) bringing in a cost of 2ψ. For
+simplicity of the formula, we model the worst case where
+none of the computations are dynamically ﬁltered.
+
+For a large dataset, the cost of self-comparison within the
+same partition for each task is negligible compared to the
+cost of comparisons with other vectors in O. The execution
+time of PSS1 task (Figure 4) can be approximately modeled
+as follows.
+
+lookup
+
+multiply+add
+
+traverse S,B,C
+
+￿. (1)
+
+Time = q￿ nk(
+
+￿￿￿￿h +
+
+￿ ￿￿ ￿
+
+ps × 2ψ ) +
+
+δtotal
+
+￿￿￿￿
+
+As s increases, q decreases and the cost of inverted index
+lookup may be amortized. In the core computation, ps in-
+creases as s increases. More importantly, the running time
+can be dominated by δtotal which is the data access cost due
+to cache or memory latency. The data access cost is aﬀected
+by s because of the presence of memory hierarchy. We in-
+vestigate how to determine the optimal s value to minimize
+the overall cost in the following subsection.
+4.2 Memory and Cache Access of PSS1
+
+Here, we estimate the cost of accessing data in S, B, and
+C. Deﬁne D0 as the total number of data accesses in per-
+forming Compare(Si, dj) in Figure 4. Deﬁne Dj as the total
+number of data access misses in cache level j. δi is the access
+time at cache level i. δmem is the memory access time.
+
+δtotal = (D0 − D1)δ1 + (D1 − D2)δ2 + (D2 − D3)δ3
+
++ D3δmem.
+
+(2)
+
+To conduct the computation in Lines 12 and 13 of Fig-
+ure 2, the program needs to access weights of Si, B, score[ ]
+and maxw[ ] in C. We model these accesses separately then
+add them together as follows:
+
+D0 = D0(Si)+D0(B)+D0(C) =
+
+Si￿￿￿￿nkps +
+
+B
+
+￿￿￿￿nk +
+
+2nkps . (3)
+
+C
+
+￿ ￿￿ ￿
+
+Case
+
+(1)
+
+(2)
+
+(3)
+
+(4)
+
+(5)
+
+(6)
+
+m1
+m2
+m3
+m1
+m2
+m3
+m1
+
+m2
+m3
+m1
+m2
+m3
+m1
+m2
+m3
+
+m1
+m2
+m3
+
+Si
+es
+fsl
+0
+0
+es
+fsl
+0
+0
+es
+fsl
+
+1
+0
+es
+fsl
+1
+0
+es
+fsl
+1
+1
+es
+fsl
+1
+1
+
+Description
+C ﬁts in L1; Si does
+not ﬁt L1, but ﬁts in
+L2.
+
+C
+0
+0
+0
+ec
+fcl
+0
+0
+ec
+fcl C does not ﬁt in L1,
+
+Si and C do not ﬁt
+in L1, but ﬁt in L2.
+
+but ﬁts in L2;
+Si does not ﬁt in L2
+but ﬁts in L3.
+Si and C do not ﬁt
+in L2, but ﬁt in L3.
+
+0
+0
+ec
+fcl
+1
+0
+ec
+fcl C does not ﬁt in L2
+1
+0
+ec
+fcl
+1
+1
+
+Si and C do not ﬁt
+in L3.
+
+but ﬁts in L3; Si
+does not ﬁt in L3.
+
+Table 2: Cases of cache miss ratios for split Si and area C in
+PSS1 at diﬀerent cache levels. Column 3 is the cache miss
+ratio mj(Si) for accessing data in Si. Column 4 is the cache
+miss ratio mj(C) for accessing data in C. Column 5 describes
+the condition of each case.
+
+Deﬁne Dj(X) as the total number of data accesses missed
+in cache level j for accessing area X. mj(X) is the cache
+miss ratio to access data for area X in cache level j.
+
+Dj =Dj(Si) +D j(B) +D j(C)
+
+=Dj−1(Si) ∗ mj(Si) +D j−1(B) ∗ mj(B)
+
++ Dj−1(C) ∗ mj(C).
+
+(4)
+
+Table 2 lists six cases of miss ratio values mj(Si) and
+mj(C) at diﬀerent cache levels j. The miss ratio for B is
+not listed and is considered close to 0 assuming it is small
+enough to ﬁt in L1 cache after warm-up. That is true for
+our tested datasets. For a dataset with long vectors and B
+cannot ﬁt in L1, there is a small overhead to fetch it partially
+from L2 to L1. Such overhead is negligible due to the relative
+small size of B, compared to Si and C. We explain this table
+in more details from the following aspects.
+
+• A cache miss triggers the loading of a cache line from
+next level. We assume the cost of a cold cache miss
+during initial cache warm-up is negligible and the cache
+replacement policy is LRU-based. Thus the cache miss
+ratio for consecutive access of a vector of elements is
+1
+l/e where l is the cache line size and e is the size of each
+element in bytes. We assume that cache lines are the
+same in all cache levels for simplicity, which matches
+the current Intel and AMD architecture.
+
+• The computer system prefetches a few cache lines in
+advance, in anticipation of using consecutive memory
+regions [17, 15]. Let fs be the eﬀective prefetch factor
+for Si, and es be the element size for Si. The cache
+miss ratio for accessing Si is adjusted as es
+fsl . Similarly,
+the cache miss ratio for accessing C is adjusted as ec
+fcl
+
+716and the cache miss ratio for accessing B is adjusted as
+eb
+fbl .
+
+• In Case (1), s is small. C can ﬁt in L1 cache. Thus
+after initial data loading, its corresponding cache miss
+ratios m1(C1), m2(C1), and m3(C1) are close to 0.
+Then m1(Si) = es
+fsl , and m2(Si) and m3(Si) are ap-
+proximately 0 since each split can ﬁt in L2 (but not
+L1). In this case, s is too small, the beneﬁt of using
+the inverted index does not outweigh the overhead of
+the inverted-index constructions and dynamic look-up.
+
+• In Case (2), Si and C can ﬁt in L2 cache (but not L1).
+fcl . m2(Si) and m3(Si)
+
+m1(Si) = es
+are approximately 0. Thus δtotal is:
+
+fsl , and m1(C) = ec
+
+δtotal =￿ nkps(1 −
+
+es
+fsl
+
++￿ nkps
+
+es
+fsl
+
+) +nkp s + 2nkps(1 −
+
++ 2nkps
+
+ec
+
+fcl ￿ δ2.
+
+ec
+fcl
+
+)￿ δ1
+
+(5)
+
+Hence task time is
+
+T ime = q￿nk(h + ps2ψ) +nkp s￿4δ1 + (
+
+es
+fs
+
++
+
+2ec
+fc
+
+)
+
+δ2 − δ1
+
+l
+
+￿￿ .
+
+• As s becomes large in Case (3) to Case (6), Si and C
+cannot ﬁt in L2 nor L3, and they need to be fetched
+periodically from memory if not L3.
+
+We illustrate s value for the optimal case. For the AMD
+Bulldozer 8-core CPU architecture (FX-8120) tested in our
+experiments, L1 cache is of size 16KB for each core. L2 cache
+is of size 2MB shared by 2 cores and L3 cache is of size 8MB
+shared by 8 cores. Thus 1MB on average for each core.
+Other parameters are: δm = 64.52ns, δ3 = 24.19ns,δ2 =
+3.23ns, δ1 = 0.65ns, l = 64 bytes. We estimate ψ = 0.16ns,
+h = 10ns, ps = 10%s, fc = fs = 4 based on the results from
+our micro benchmark. The minimum task time occurs in
+Case (2) when Si and C can ﬁt in L2 cache, but not L1. Thus
+the constraint based on the L2 cache size can be expressed
+as
+
+s × k × es + 2s × ec ≤ 1M B.
+
+While satisfying the above condition, split size s is chosen
+as large as possible to reduce q value. For Twitter data, k
+is 18, es is 28 bytes, and ec is 4 bytes. Thus the optimal s
+is around 2K.
+
+To show how the choice of s aﬀects the task execution time
+in Formula (1), we measure the ratio of the data access time
+(including the inverted index lookup) over the computation
+time:
+
+Data-access
+Computation
+
+=
+
+4δ1 + ( es
+fs
+
++ 2ec
+fc
+2ψ
+
+) δ2−δ1
+
+l + h
+ps
+
+.
+
+This ratio captures the data access overhead paid to per-
+form comparison computation and the smaller the value is,
+the better. For Twitter benchmark, the above ratio is 8
+for optimum case, while it increases to over 25 for Case (3)
+and Case (4) where more frequent access to L3 cache is re-
+quired. The data-access-to-computation ratio deduction is
+supported by experiment results shown in Figure 5. It shows
+
+that by selecting s based on our cost function, we are able
+to reduce the data-access-to-computation ratio from 25 to 8.
+When an optimum s is chosen, we manage to dramatically
+reduce the slow cache/memory access out of the whole task
+execution time.
+
+o
+
+i
+t
+
+a
+r
+ 
+
+e
+m
+
+i
+t
+ 
+
+n
+o
+
+i
+t
+
+a
+
+t
+
+u
+p
+m
+o
+c
+ 
+
+o
+
+t
+ 
+
+e
+m
+
+i
+t
+ 
+s
+s
+e
+c
+c
+a
+
+ 
+
+a
+
+t
+
+a
+D
+
+ 30
+
+ 25
+
+ 20
+
+ 15
+
+ 10
+
+ 5
+
+5K
+
+10K
+
+15K
+
+Split size: s
+
+ratio
+
+20K
+
+25K
+
+Figure 5: Y axis is the ratio of actual data access time to
+computation time for Twitter data observed in our experi-
+ments.
+
+5. PSS2 WITH FEATURE-BASED VECTOR
+
+COALESCING
+
+In PSS1, every time a feature weight from area Si is loaded
+to L1 cache, its value is multiplied by a weight from a vec-
+tor in B. As Si does not ﬁt in L1 cache, the utilization of
+L1 for Si is low. L1 cache usage for Si is mainly for spa-
+tial locality. Namely fetching one or few cache lines for Si
+to avoid future L1 cache miss when consecutive data is ac-
+cessed. The beniﬁt of temporal locality is low, because the
+same element is unlikely to be accessed again before being
+evicted, especially for L1 cache due to its small size.
+
+Another way to understand this weakness is that the num-
+ber of times that an element in L1 loaded for Si can be used
+to multiply a weight in B is low before this element of Si is
+evicted out from L1 cache. PSS2 is proposed to adjust the
+data layout and access structure in B in order to increase
+L1 cache reuse ratio for Si. The key idea of PSS2 is listed
+as follows.
+
+• Once an element in Si is loaded to L1 cache, we com-
+pare more vectors in B at each stage. Namely group
+Si from S is compared with b vectors in B.
+
+• We coalesce b vectors in B and build an inverted in-
+dex from these b vectors. The comparison between Si
+and b vectors in B is done by intersecting postings of
+common features in B and Si.
+
+• The above approach also beneﬁts the amortization of
+inverted index lookup cost. In PSS1, every term post-
+ing lookup for Si can only beneﬁt multiplication with
+one element in B.
+In PSS2, every look up can po-
+tentially beneﬁt multiple elements because of vector
+coalescing.
+
+Figure 7 illustrates the data traversal pattern of PSS2
+with b = 3. There is one common feature t3 that appears
+in both Si and B. The posting of t3 in Si is { w1,3,w2,3}
+
+717PSS2 Task (A, O)
+1: Read A and divide it into q splits of s vectors each
+2: Build an inverted index for each split Si.
+3: repeat
+4:
+5:
+6:
+7: until all vectors in O are compared
+
+Fetch b vectors from O and build inverted index in B
+for Si ∈ S do
+
+Compare(Si, B)
+
+for dj ∈ P osting(t) inB and di is a candidate do
+
+rj ← ||dj||1
+for di ∈ P osting(t) inS do
+
+Compare (S, B)
+8: Initialize array score of size s × b with zeros
+9: for j = 1 to b do
+10:
+11: for Feature t appears in B and S do
+12:
+13:
+14:
+15:
+16:
+17:
+rj = rj − wj,t
+18:
+19: for i = 1 to s do
+20:
+for j = 1 to b do
+21:
+22:
+
+score[i][j]=score[i][j]+wi,t×wj,t
+if (score[i][j]+maxw[di]×rj<τ ) then
+Mark pair di and dj as non-candidate
+
+for dj ∈ P osting(t) inB do
+
+if score[i][j]>τ then
+
+Write (di, dj, score[i][j])
+
+Figure 6: PSS2 task.
+
+and each iteration of PPS2 uses one element from this list,
+and multiplies it with elements in the corresponding posting
+of B which is { w4,3,w6,3}. Thus every L1 cache loading
+for Si can beneﬁt 2 multiplications with weights in B. In
+comparison, every L1 loading of weights for Si in PSS1 can
+only beneﬁt one multiplication.
+
+Figure 7: Example of data traversal in PSS2.
+
+Increasing b values expands the size of areas B and C to
+store b vectors and a 2D array score[][]. B and C may not
+ﬁt in L1, or even L2 cache anymore. Since L2/L3 cache has
+higher latency, cache capacity restricts the value of b from
+being too large. On the other hand, vectors in B are sparse
+and b cannot be too small so that there is a suﬃcient number
+of vectors sharing a feature after coalescing. Our experiment
+in Figure 11 discusses this issue in more details.
+
+Similar to PSS1, we can conduct a case-by-case analysis
+for cache miss ratios of PSS2 based on how Si, B and C ﬁt
+in the diﬀerent levels of cache. Then we can derive the s
+and b ranges in each case.
+
+6. EXPERIMENTS
+
+We have implemented PSS, PSS1 and PSS2 in Java. Dur-
+ing the evaluation, PSS, PSS1 and PSS2 are applied after
+
+data preprocessing. In the default setting, static partition-
+ing [1] is adopted to partition the dataset then, a set of
+parallel tasks is executed following either PSS2 or PSS1. In
+another setting (Table 3), LSH [11, 26] is applied ﬁrst before
+static partitioning.
+
+We also evaluated another design option we refer to as
+PSS3. PSS3 follows the previous scientiﬁc computing re-
+search that views a sparse matrix as a collection of dense
+small submatrices and employs BLAS3 to perform subma-
+trix multiplication [10, 24, 27].
+In this case, we represent
+the feature vectors in S and B as a set of small submatrices
+and use a highly optimized BLAS3 library called MTJ [13]
+for the submatrix multiplication.
+
+The evaluation has the following objectives:
+
+1. Compare PSS1 and PSS2 with the baseline PSS us-
+ing multiple application datasets. Study how the al-
+gorithms behave with diﬀerent dataset sizes.
+
+2. Evaluate the choice and impact of s value for PSS1
+
+and s and b for PSS2.
+
+3. Illustrate the predicted and observed cache hit ratio.
+Validate the accuracy of the cost model with respect
+to the actual execution time.
+
+4. Report the overall parallel performance.
+
+5. Evaluate PSS3 to understand the issues of submatrix
+
+multiplication for APSS.
+
+Metrics. We report the running time for diﬀerent al-
+gorithms when the static partitioning is given. Since the
+number of tasks is ﬁxed, the overall parallel time is propor-
+tional to the average task running time. Hence we mainly
+report the average task running time to evaluate the perfor-
+mance impact of adjusting split size and fetched block size.
+The cost of self-comparison among vectors within a parti-
+tion is included when reporting the actual cost. To assess
+the scalability, we report the overall speedup for the paral-
+lel performance, and measure the megaﬂops number as an
+additional metric.
+6.1 Datasets and experimental setup
+
+The experiments are mainly conducted on a cluster of
+AMD nodes where each node has 8 cores with 3.1GHz AMD
+Bulldozer FX8120 and 16GB memory. They run the Hadoop
+MapReduce environment. In reporting parallel speedup, we
+have used a bigger cluster of Intel 12-core nodes and each
+node has dual Intel X5650 six-core processors and 24GB
+memory. The following ﬁve datasets are used.
+
+• Twitter dataset containing 20 million tweets collected
+from approximately 2 million unique users. The aver-
+age number of features per vector is 18.32.
+
+• A web dataset containing about 50 million web pages,
+randomly selected from the Clueweb collection dis-
+tributed by [3]. The average number of features is 320
+per web page.
+
+• Enron email dataset containing 619,446 messages from
+the Enron corpus, belonging to 158 users with an aver-
+age of 757 messages per user. The average number of
+features is 107 per message. The corpus contains large
+numbers of duplicated emails.
+
+718• Yahoo music dataset containing 1,000,990 users rating
+624,961 songs to investigate the similarity among songs
+for music recommendation.
+
+• Google news webpages with over 100K news articles
+crawled from Google.com. The average number of fea-
+tures per article is 830.
+
+The datasets are preprocessed to follow the TF-IDF weight-
+
+ing after cleaning and stopword ﬁltering [18].
+6.2 Comparative studies for execution time and
+
+impact of parameters
+
+o
+
+i
+t
+
+a
+r
+ 
+t
+
+n
+e
+m
+v
+o
+r
+p
+m
+
+I
+ 
+
+  3x
+  2.5x
+  2x
+  1.5x
+  1x
+  0.5x
+  0x
+
+PSS1 vs. baseline
+PSS2 vs. baseline
+
+Twitter
+
+Clueweb
+
+Emails
+
+YMusic
+
+Gnews
+
+Benchmarks
+Figure 8: Y axis is ratio T imeP SS
+T imeP SS1
+average task running time includes I/O.
+
+and T imeP SS
+T imeP SS2
+
+. The
+
+and T imeP SS
+T imeP SS2
+
+Figure 8 shows the improvement ratio on the average
+task time after applying PSS1 and PSS2 over the baseline.
+Namely T imeP SS
+. PSS is cache-oblivious
+T imeP SS1
+and each task handles a very large partition that ﬁts into the
+main memory (but not fast cache). For example, each parti-
+tion for Clueweb can have around 500,000 web pages. Result
+shows PSS2 contributes signiﬁcant improvement compared
+to PSS1. For example, under Clueweb dataset, PSS1 is 1.2x
+faster than the baseline PSS while PSS2 is 2.74x faster than
+PSS. The split size s for PSS1 and s and b for PSS2 are
+optimally chosen.
+
+)
+.
+n
+m
+
+i
+
+l
+
+(
+ 
+e
+a
+c
+s
+-
+g
+o
+
+l
+ 
+
+n
+
+i
+ 
+
+e
+m
+
+i
+t
+ 
+k
+s
+a
+
+t
+ 
+.
+
+g
+v
+A
+
+ 9.5
+
+ 9
+
+ 8.5
+
+ 8
+
+ 7.5
+
+ 7
+
+ 6.5
+
+ 6
+
+ 5.5
+
+250
+
+500
+
+1K
+
+2K
+
+5K
+
+Split size  s
+
+50K
+
+Clueweb
+Twitter
+Emails
+
+250K
+
+Figure 9: The average running time in log scale per PSS1
+task under diﬀerent values for split size s. The partition size
+S for each task is ﬁxed, S = s × q.
+
+The gain from PSS to PSS1 is achieved by the splitting
+of the hosted partition data. Figure 9 shows the average
+
+running time of a PSS1 task including I/O in log-scale with
+diﬀerent values of s. Notice that the partition size (S =
+s × q) handled by each task is ﬁxed. The choice of split
+size s makes an impact on data access cost.
+Increasing s
+does not change the total number of basic multiplications
+and additions needed for comparison, but it does change the
+traversal pattern of memory hierarchy and thus aﬀects data
+access cost. For all the datasets shown, the lowest value of
+the running time is achieved when s value is ranged between
+0.5K and 2K, consistent with our analytic results.
+
+1K
+
+100
+
+b
+
+ 
+
+e
+z
+s
+ 
+
+i
+
+i
+
+g
+n
+c
+s
+e
+a
+o
+C
+
+l
+
+32
+
+8
+
+’-’ using 2:1:3
+
+ 600
+
+ 550
+
+ 500
+
+)
+
+m
+
+ 450
+
+(
+ 
+
+e
+m
+
+ 400
+
+i
+t
+ 
+k
+s
+a
+
+ 350
+
+t
+ 
+.
+
+g
+v
+A
+
+ 300
+
+ 250
+
+ 200
+
+1K
+
+5K
+
+10K
+50K
+Split size s
+
+100K
+
+500K
+
+Figure 10: Each square is an s × b PSS2 implementation
+dataset. The lowest time is the lightest shade.
+
+(where￿ s = S) shaded by its average task time for Twitter
+
+The gain of PSS2 over PSS1 is made by coalescing visits
+of vectors in B with a control. Figure 10 depicts the average
+time of the Twitter tasks with diﬀerent s and b, including
+I/O. The darker each square is, the longer the execution time
+is. The shortest running time is achieved when b = 32 and
+s is between 5K to 10K. When b is too small, the number of
+features shared among b vectors is too small to amortize the
+cost of coalescing. When b is too big, the footprint of area
+C and B becomes too big to ﬁt into L2 cache.
+
+While PSS1 outperforms PSS in all 5 datasets, there is
+an exception for Yahoo music dataset. The beneﬁts of PSS2
+over PSS1 depend on how many features are shared in area
+B. The top and bottom parts of Figure 11 show the average
+and maximum number of features shared among b vectors in
+area B, respectively. Sharing pattern is highly skewed and
+the maximum sharing is fairly high. On the other hand,
+the average sharing value captures better on the beneﬁts of
+coalescing. The average number shared exceeds 2 or more
+for all data when b is above 32 (the optimal b value for PSS2)
+except Yahoo music. In the Yahoo music data, each vector
+represents a song and features are the users rating this song.
+PSS2 slows down the execution due to the low intersection
+of the interest among users.
+6.3 Cache Behavior and Cost Modeling
+
+We demonstrate the cache behavior of PSS1 modeled in
+Section 4.2 with the Twitter dataset. The Linux perf tool is
+used to collect the cache miss ratio of L1 and L3.
+
+Figure 12 depicts the real cache miss ratios for L1 and L3
+reported by perf tool, the estimated L1 miss ratio which is
+D1/D0, and the estimated L3 miss ratio which is D3/D2. L1
+cache miss ratio grows from 3.5%, peaks when s = 8K, and
+gradually drops to around 9% afterwards when s value in-
+
+719 
+s
+e
+r
+u
+
+t
+
+a
+e
+
+f
+ 
+
+d
+e
+r
+a
+h
+s
+ 
+f
+
+o
+ 
+r
+e
+b
+m
+u
+n
+
+ 
+.
+
+g
+v
+A
+
+ 
+s
+e
+r
+u
+
+t
+
+a
+e
+
+f
+ 
+
+d
+e
+r
+a
+h
+s
+ 
+f
+
+o
+ 
+r
+e
+b
+m
+u
+n
+
+ 
+.
+x
+a
+M
+
+  16
+  14
+  12
+  10
+  8
+  6
+  4
+  2
+  0
+
+  600
+
+  500
+
+  400
+
+  300
+
+  200
+
+  100
+
+  0
+
+Twitter
+Clueweb
+Emails
+YMusic
+Gnews
+
+8
+
+16
+
+64
+
+32
+128
+ Coalescing size b
+
+256
+
+512
+
+Twitter
+Clueweb
+Emails
+YMusic
+Gnews
+
+8
+
+16
+
+64
+
+128
+32
+ Coalescing size  b
+
+256
+
+512
+
+Figure 11: The top is the average number of shared features
+among b vectors. The bottom is the maximum number of
+features shared among b vectors.
+
+creases. L3 cache miss ratio starts from 3.65% when s=100,
+reaches the bottom at 1.04% when s= 5K, and rises to al-
+most 25% when s= 500K. The ﬁgure shows that the esti-
+mated cache miss ratio approximates the trend of the actual
+cache miss ratio well.
+
+To validate our cost model, we compare the estimated
+cost with experimental results in Figure 13. Our estimation
+of cache miss ratios ﬁts the real ratios quite well, reason-
+ably predicts the trend of ratio change as split size changes.
+When s is very small, the overhead of building and search-
+ing the inverted indexes are too high and thus the actual
+performance is poor. When s ranges from 50K to 80K, the
+actual running time drops. This is because as s increases,
+there is some beneﬁt for amortizing the cost of inverted in-
+dex lookup. Both the estimated and real time results suggest
+that the optimum s value is around 2K. Given the optimum
+s, PSS1 is twice faster than when s is 10K.
+
+6.4 Performance of PSS1 and PSS2 with vary-
+
+ing dataset sizes
+
+We also compare the performance of PSS1 and PSS2 with
+
+the baseline PSS when the dataset size changes.
+
+Figure 14 shows the average running time of tasks under
+the three algorithms for four benchmarks with varying input
+size. We still observe the same trend that PSS1 outperforms
+the baseline. PSS2 also outperforms PSS1 in all cases except
+for Yahoo music benchmark. In that case, PSS1 is better
+than baseline, which is better than PSS2 due to low sharing
+pattern among the b vectors discussed in Section 6.2.
+
+To reduce the required comparisons with an approxima-
+tion, we tested the algorithms over an LSH implementation
+
+Figure 12: Estimated and real cache miss ratios for PSS1
+tasks.
+
+from [26]. LSH is applied ﬁrst then the static partitioning.
+Table 3 compares the baseline with PSS2 after applying LSH
+partitioning over Clueweb dataset with varying sizes. PSS2
+is upto 2.55x as fast as PSS for the 50M dataset.
+
+Dataset size #Buckets PSS (m) PSS2 (m)
+
+10 M
+50 M
+
+176
+513
+
+233.34
+1005.42
+
+98.07
+394.46
+
+Table 3: PSS and PSS2 task time after LSH mapping for
+Clueweb. The average number of partitions per bucket is
+about 6.
+
+6.5 Overall performance and a comparison
+
+with PSS3
+
+We assess the overall performance in terms of speedup in
+processing the entire dataset when varying the number of
+cores. Figure 15 reports the speedup (parallel time divided
+by sequential time) for processing Twitter dataset with dif-
+ferent numbers of cores in the Intel cluster aforementioned.
+PSS2 scales well with more computing resources.
+
+We also assess the individual task performance in utilizing
+the CPU resource by collecting its megaﬂops rate and com-
+pare it with the peak megaﬂops rate when vectors are dense.
+Similarity computation can be viewed approximately as a
+
+)
+n
+m
+
+i
+
+(
+ 
+e
+m
+
+i
+t
+ 
+k
+s
+a
+t
+ 
+.
+g
+v
+A
+
+ 250
+
+ 200
+
+ 150
+
+ 100
+
+ 50
+
+ 0
+
+10K
+
+20K
+
+30K
+
+Actual time
+Estimated time
+
+70K
+
+80K
+
+90K
+
+100K
+
+40K
+
+50K
+
+60K
+
+Split size: s
+
+Figure 13: Actual vs estimated average task time for PSS1
+in 3M Twitter dataset while split size varies.
+
+720)
+n
+m
+
+i
+
+(
+ 
+
+O
+
+/
+I
+ 
+
+ 
+
++
+e
+m
+
+i
+t
+ 
+k
+s
+a
+
+t
+ 
+.
+
+g
+v
+A
+
+)
+n
+m
+
+i
+
+(
+ 
+
+O
+
+/
+I
+ 
+
+ 
+
++
+e
+m
+
+i
+t
+ 
+k
+s
+a
+
+t
+ 
+.
+
+g
+v
+A
+
+ 140
+
+ 120
+
+ 100
+
+ 80
+
+ 60
+
+ 40
+
+ 20
+
+ 0
+
+ 120
+
+ 100
+
+ 80
+
+ 60
+
+ 40
+
+ 20
+
+ 0
+
+)
+n
+m
+
+i
+
+(
+ 
+
+O
+
+/
+I
+ 
+
+ 
+
++
+e
+m
+
+i
+t
+ 
+k
+s
+a
+
+t
+ 
+.
+
+g
+v
+A
+
+)
+n
+m
+
+i
+
+(
+ 
+
+O
+
+/
+I
+ 
+
+ 
+
++
+e
+m
+
+i
+t
+ 
+k
+s
+a
+
+t
+ 
+.
+
+g
+v
+A
+
+1M
+
+2M
+
+3M
+
+Dataset size
+(a) Twitter
+
+BaselinePSS1
+PSS2
+5M
+
+4M
+
+100K
+
+200K
+
+300K
+
+Dataset size
+
+(c) Emails
+
+BaselinePSS1
+PSS2
+
+400K
+
+500K
+
+ 1200
+
+ 1000
+
+ 800
+
+ 600
+
+ 400
+
+ 200
+
+ 0
+
+ 70
+
+ 60
+
+ 50
+
+ 40
+
+ 30
+
+ 20
+
+ 10
+
+ 0
+
+1M
+
+5M
+
+10M
+
+20M
+
+Dataset size
+(b) Clueweb
+
+BaselinePSS1
+PSS2
+
+40M
+
+100K
+
+200K
+
+400K
+Dataset size
+
+(d) YahooMusic
+
+BaselinePSS2
+PSS1
+
+600K
+
+Figure 14: Average task running time under Baseline, PSS1 and PSS2 over diﬀerent datasets.
+
+e
+m
+
+i
+t
+ 
+l
+
+e
+
+l
+l
+
+a
+r
+a
+p
+
+ 
+
+n
+
+i
+ 
+
+o
+
+i
+t
+
+a
+r
+ 
+p
+u
+d
+e
+e
+p
+S
+
+ 400
+
+ 350
+
+ 300
+
+ 250
+
+ 200
+
+ 150
+
+ 100
+
+ 50
+
+ 0
+
+10
+
+50
+
+100
+
+200
+
+Number of cores
+
+Twitter
+Clueweb
+
+400
+
+Figure 15: Speedup of PSS2 for processing 20M Twitter and
+40M Clueweb with varying numbers of cores.
+
+sparse matrix multiplication together with dynamic compu-
+tation ﬁltering. We assess the gap between how fast each
+CPU core can do in terms of peak application performance
+with a dense matrix and what our scheme has accomplished.
+First we compare the megaﬂops performance of our Java
+code with MTJ [13] from Netlib, which is highly optimized
+for dense matrix multiplication. The megaﬂops numbers
+achieved by a dense matrix multiplication routine (called
+dgemm) in MTJ achieves 1500 megaﬂops for matrix dimen-
+sion 1000 on a single core and achieves 500 megaﬂops for a
+small dense matrix. Our scheme achieves 280 megaﬂops for
+Twitter benchmark. That is fairly high considering we are
+dealing with extremely sparse matrices.
+
+In PSS3 design, we represent feature vectors in S and B as
+
+a set of small dense submatrices and employ a built-in MTJ
+BLAS3 dense matrix routine to multiply these submatirces.
+The advantage of PSS3 is that we leverage MTJ, a highly op-
+timized library for cache performance. The disadvantage is
+that these small dense matrices still contain many zeros and
+a BLAS3 routine does not remove the unnecessary computa-
+tion operations as well as an inverted index does. Figure 16
+lists the comparison between PSS3 and PSS2 performance,
+with the ratio T imeP SS3
+for diﬀerent block settings. PSS3
+T imeP SS2
+is unfortunately much slower than PSS2. The reason is that
+vector-feature matrices in the tested similarity applications
+are extremely sparse and the PSS3 strategy with BLAS3
+does not contribute enough beneﬁts to counteract the intro-
+duced overhead.
+
+ 
+o
+i
+t
+a
+r
+ 
+n
+o
+i
+t
+a
+d
+a
+r
+g
+e
+D
+
+ 
+
+  35x
+  30x
+  25x
+  20x
+  15x
+  10x
+  5x
+!"#
+
+Twitter
+Clueweb
+Emails
+
+4
+
+16
+
+32
+
+Block size in PSS3
+
+Figure 16: Y axis is ratio T imeP SS3
+T imeP SS2
+PSS2 in general under diﬀerent blocking sizes.
+
+. PSS3 is slower than
+
+Table 4 provides another angle to explain why PSS3 slows
+down the task. We list the average ﬁll-in ratio of those
+nonzero submatrices handled by PSS3. Fill-in ratio is the
+
+721number of stored values which are in fact zero divided by
+the number of true nonzeros. The ﬁll-in ratio is high and
+the number of true nonzeros for each block is too low to gain
+enough beneﬁts with this blocked approach.
+
+Block size
+Twitter
+Clueweb
+
+4×4
+2.5
+2.6
+
+4×8
+3.7
+8.2
+
+4×16
+3.9
+4.8
+
+16×16
+6.2
+5.6
+
+32×8
+5.3
+4.4
+
+32×16
+7.7
+6.2
+
+Table 4: Average ﬁll-in ratio with diﬀerent block sizes.
+
+7. CONCLUSIONS
+
+The main contribution of this paper is the development
+and analysis of cache-conscious data layout and traversal
+schemes for partition-based similarity search. The key tech-
+niques are to 1) split data traversal in the hosted partition
+so that the size of temporary vectors accessed can be con-
+trolled and ﬁt in the fast cache; 2) coalesce vectors with
+size-controlled inverted indexing so that the temporal local-
+ity of data elements visited can be exploited. Our analy-
+sis provides a guidance for optimal parameter setting. The
+evaluation result shows that the optimized code can be upto
+2.74x as fast as the original cache-obvious design. Vector
+coalescing is eﬀective if there is a decent number of features
+shared among the coalesced vectors.
+
+Acknowledgment
+We thank Xifeng Yan, Alexandra Potapova, and Paul Weak-
+liem for their support and feedback, and the anonymous ref-
+erees for their thorough comments. This work is supported
+in part by NSF IIS-1118106/0905084 and Kuwait University
+Scholarship. Equipment access is supported by the Center
+for Scientiﬁc Computing at CNSI/MRL under NSF DMR-
+1121053 and CNS-0960316. Any opinions, ﬁndings, con-
+clusions or recommendations expressed in this material are
+those of the authors and do not necessarily reﬂect the views
+of the National Science Foundation.
+
+8. REFERENCES
+[1] Maha Alabduljalil, Xun Tang, and Tao Yang. Optimizing
+parallel algorithms for all pairs similarity search. In Proc.
+of 6th ACM Inter. Conf. on Web Search and Data Mining
+(WSDM), 2013.
+
+[2] Arvind Arasu, Venkatesh Ganti, and Raghav Kaushik.
+
+Eﬃcient exact set-similarity joins. In VLDB’06.
+
+[3] Language Technologies Institute at Carnegie
+
+Mellon University. The clueweb09 dataset,
+http://boston.lti.cs.cmu.edu/data/clueweb09.
+
+[4] John R. Gilbert Aydin Bulu. Challenges and advances in
+
+parallel sparse matrix-matrix multiplication. In ICPP, 2008.
+
+[5] Ricardo Baeza-Yates and Berthier Ribeiro-Neto. Modern
+
+Information Retrieval. Addison Wesley, 1999.
+
+[6] Roberto J. Bayardo, Yiming Ma, and Ramakrishnan
+
+Srikant. Scaling up all pairs similarity search. In
+Proceedings of WWW, 2007.
+
+[7] Fidel Cacheda, V´ıctor Carneiro, Diego Fern´andez, and
+Vreixo Formoso. Comparison of collaborative ﬁltering
+algorithms: Limitations of current techniques and proposals
+for scalable, high-performance recommender systems. ACM
+Trans. Web, 2011.
+
+[8] Abdur Chowdhury, Ophir Frieder, David A. Grossman, and
+
+M. Catherine McCabe. Collection statistics for fast
+duplicate document detection. ACM Trans. Inf. Syst., 2002.
+
+[9] J. J. Dongarra, Jeremy Du Croz, Sven Hammarling, and
+
+I. S. Duﬀ. A set of level 3 basic linear algebra subprograms.
+ACM Trans. Math. Softw., 16(1):1–17, March 1990.
+
+[10] Iain S. Duﬀ, Michael A. Heroux, and Roldan Pozo. An
+
+overview of the sparse basic linear algebra subprograms:
+The new standard from the blas technical forum. ACM
+Trans. Math. Softw., 28(2):239–267, June 2002.
+
+[11] Aristides Gionis, Piotr Indyk, and Rajeev Motwani.
+
+Similarity search in high dimensions via hashing. In VLDB,
+1999.
+
+[12] Hannaneh Hajishirzi, Wen tau Yih, and Aleksander Kolcz.
+
+Adaptive near-duplicate detection via similarity learning.
+In SIGIR, 2010.
+
+[13] Heimsund Halliday.
+
+http://code.google.com/p/matrix-toolkits-java.
+
+[14] Nitin Jindal and Bing Liu. Opinion spam and analysis. In
+Proceedings of the international conference on Web search
+and web data mining, WSDM ’08, pages 219–230, 2008.
+
+[15] David Kanter. Md’s bulldozer microarchitecture.
+
+realworldtech.com, 2010.
+
+[16] Aleksander Kolcz, Abdur Chowdhury, and Joshua
+Alspector. Improved robustness of signature-based
+near-replica detection via lexicon randomization. In
+Proceedings of KDD, 2004.
+
+[17] David Levinthal. Performance analysis guide for intel core
+
+i7 processor and intel xeon 5500 processors. Intel, 2009.
+
+[18] Jimmy Lin. Brute force and indexed approaches to pairwise
+
+document similarity comparisons with mapreduce. In
+SIGIR, 2009.
+
+[19] Stefan Manegold, Peter Boncz, and Martin L. Kersten.
+Generic database cost models for hierarchical memory
+systems. In VLDB ’02, 2002.
+
+[20] Ahmed Metwally, Divyakant Agrawal, and Amr El Abbadi.
+
+Detectives: detecting coalition hit inﬂation attacks in
+advertising networks streams. In Proceedings of the 16th
+international conference on World Wide Web, WWW ’07.
+
+[21] Gianmarco De Francisci Morales, Claudio Lucchese, and
+
+Ranieri Baraglia. Scaling out all pairs similarity search with
+mapreduce. In 8th Workshop on LargeScale Distributed
+Systems for Information Retrieval (2010), 2010.
+
+[22] Mehran Sahami and Timothy D. Heilman. A web-based
+kernel function for measuring the similarity of short text
+snippets. In WWW ’06, pages 377–386, 2006.
+
+[23] Ambuj Shatdal, Chander Kant, and Jeﬀrey F. Naughton.
+
+Cache conscious algorithms for relational query processing.
+In In Proceedings of the 20th VLDB Conference, pages
+510–521. Morgan Kaufmann Publishers Inc, 1994.
+
+[24] Kai Shen, Tao Yang, and Xiangmin Jiao. S+: Eﬃcient 2d
+
+sparse lu factorization on parallel machines. SIAM J.
+Matrix Anal. Appl., 22(1):282–305, April 2000.
+
+[25] Narayanan Shivakumar and Hector Garcia-Molina.
+
+Building a scalable and accurate copy detection
+mechanism. In DL’96 (ACM Inter. Conf. on Digital
+libraries), pages 160–168.
+
+[26] Ferhan Ture, Tamer Elsayed, and Jimmy Lin. No free
+
+lunch: brute force vs. locality-sensitive hashing for
+cross-lingual pairwise similarity. In SIGIR ’2011.
+
+[27] Richard Vuduc, James W. Demmel, Katherine A. Yelick,
+
+Shoaib Kamil, Rajesh Nishtala, and Benjamin Lee.
+Performance optimizations and bounds for sparse
+matrix-vector multiply. In ACM/IEEE Conf. on
+Supercomputing, 2002.
+
+[28] Chuan Xiao, Wei Wang, Xuemin Lin, and Jeﬀrey Xu Yu.
+
+Eﬃcient similarity joins for near duplicate detection. In
+Proceeding of the 17th international conference on World
+Wide Web, WWW ’08, pages 131–140. ACM, 2008.
+
+[29] Yuan Cao Zhang, Diarmuid ´O S´eaghdha, Daniele Quercia,
+and Tamas Jambor. Auralist: introducing serendipity into
+music recommendation. In Proceedings of the ﬁfth ACM
+international conference on Web search and data mining,
+WSDM ’12. ACM, 2012.
+
+[30] Shanzhong Zhu, Alexandra Potapova, Maha Alabduljalil,
+
+Xin Liu, and Tao Yang. Clustering and load balancing
+optimization for redundant content removal. In WWW ’12:
+Inter. Conf. on World Wide Web. Industry Track, 2012.
+
+722

@@ -1,0 +1,2078 @@
+User Model-based Metrics for Ofﬂine Query Suggestion
+
+Evaluation
+
+Eugene Kharitonov†‡, Craig Macdonald‡, Pavel Serdyukov†, Iadh Ounis‡
+
+†{kharitonov, pavser}@yandex-team.ru
+
+‡{craig.macdonald, iadh.ounis}@glasgow.ac.uk
+
+‡ School of Computing Science, University of Glasgow, UK
+
+†Yandex, Moscow, Russia
+
+ABSTRACT
+Query suggestion or auto-completion mechanisms are widely
+used by search engines and are increasingly attracting inter-
+est from the research community. However, the lack of com-
+monly accepted evaluation methodology and metrics means
+that it is not possible to compare results and approaches
+from the literature. Moreover, often the metrics used to
+evaluate query suggestions tend to be an adaptation from
+other domains without a proper justiﬁcation. Hence, it is
+not necessarily clear if the improvements reported in the lit-
+erature would result in an actual improvement in the users’
+experience. Inspired by the cascade user models and state-
+of-the-art evaluation metrics in the web search domain, we
+address the query suggestion evaluation, by ﬁrst studying
+the users behaviour from a search engine’s query log and
+thereby deriving a new family of user models describing the
+users interaction with a query suggestion mechanism. Next,
+assuming a query log-based evaluation approach, we propose
+two new metrics to evaluate query suggestions, pSaved and
+eSaved. Both metrics are parameterised by a user model.
+pSaved is deﬁned as the probability of using the query sug-
+gestions while submitting a query. eSaved equates to the
+expected relative amount of eﬀort (keypresses) a user can
+avoid due to the deployed query suggestion mechanism. Fi-
+nally, we experiment with both metrics using four user model
+instantiations as well as metrics previously used in the liter-
+ature on a dataset of 6.1M sessions. Our results demonstrate
+that pSaved and eSaved show the best alignment with the
+users satisfaction amongst the considered metrics.
+
+Categories and Subject Descriptors
+H.3.3 [Information search and retrieval]: Information
+search and retrieval
+
+Keywords
+query suggestions, evaluation measures, user models
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for proﬁt or commercial advantage and that copies bear
+this notice and the full citation on the ﬁrst page. Copyrights for components
+of this work owned by others than ACM must be honored. Abstracting with
+credit is permitted. To copy otherwise, or republish, to post on servers or to
+redistribute to lists, requires prior speciﬁc permission and/or a fee. Request
+permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+1.
+
+INTRODUCTION
+
+The query suggestion mechanism within a search engine
+is a tool aimed to help users type less while submitting a
+query. In its most basic form, the list of suggested queries is
+formed to contain queries starting with the user’s input as
+a preﬁx. Similar to the evaluation of other information re-
+trieval systems, the evaluation of query suggestions is crucial
+to ensure progress in this area of research. How to perform
+this evaluation is the general topic addressed in this paper.
+The target of evaluation in information retrieval is to as-
+sess how well a retrieval system meets the needs of its users.
+For most web search evaluation experiments, this assessment
+is performed by means of measuring document ranking eﬀec-
+tiveness, i.e. how highly relevant documents are ranked. A
+variety of the web search ranking evaluation approaches exist
+and they can be naturally divided into user-based evaluation
+and system evaluation classes [20]. The system evaluation
+paradigm originated from the Cranﬁeld experiments [9] and
+is used in evaluation initiatives such as the Text REtrieval
+Conference (TREC). The evaluation is performed using a
+test collection that consists of three components: a collec-
+tion of documents, a collection of queries (called “topics” in
+TREC terminology) and a set of document relevance assess-
+ments, usually obtained through human judgements. As a
+result of the evaluation, each system is associated with a
+value of an evaluation metric, such as Expected Reciprocal
+Rank (ERR) [6] and Discounted Cumulative Gain (DCG)
+[14]. Once the test collection is built, it can be repeatedly
+used to compare diﬀerent retrieval systems or even adjust
+the system parameters in a learning-to-rank process. The re-
+sults of evaluations are reproducible and easily interpretable.
+However, the system-based evaluation approach has several
+drawbacks, as discussed by Voorhees [20]. Firstly, due to the
+manual judgement process, it is hard to perform a large-scale
+evaluation. Taking that into account, special care must be
+taken while selecting a set of queries to be used for evalua-
+tion, since they should be representative of the users’ needs.
+This becomes even more complicated as these needs and
+users’ intentions behind queries tend to change and evolve
+over time. Apart from that, the actual users’ needs ex-
+pressed by a query can be signiﬁcantly diﬀerent from those
+a judge can think of and this results in additional noise in
+the evaluations.
+
+On the other hand, a user-based evaluation can be per-
+formed in either online or oﬄine manner. For instance, AB-
+testing and interleaving [16] are examples of the former ap-
+proach. One possible way to perform the oﬄine user-based
+evaluation is to use the implicit user feedback observed in
+
+633historical query logs as a substitute for the human judges.
+For instance, in the work of Bennett et al. [3], the document
+that received the last satisﬁed click of the user was labelled
+as personally relevant to this user. Once the labels are gen-
+erated, the test collection obtained has little diﬀerences from
+the system-based evaluation test collections. One can esti-
+mate the system eﬀectiveness by means of an appropriate
+eﬀectiveness metrics, e.g. Mean Reciprocal Rank (MRR) or
+Mean Average Precision (MAP) used by Collins-Thompson
+et al. [10].
+
+We believe that the oﬄine user-based evaluation is partic-
+ularly promising for evaluation in the query suggestion do-
+main and we support this with the arguments in Section 5.
+However, in order to follow this methodology an appropriate
+metric must be selected. A good eﬀectiveness metric should
+be aligned with the user preferences, i.e. favour a system
+with higher level of user satisfaction. Indeed, a possible way
+to ensure alignment is to design the metric on top of the
+realistic model of the user behaviour. For evaluation in the
+web search domain, Expected Reciprocal Rank (ERR) [6]
+and Expected Browsing Utility (EBU) [21] are examples of
+user model-inspired eﬃciency metrics.
+
+Unfortunately, to the best of our knowledge in the query
+suggestions domain neither a realistic model of the user in-
+teraction with the system nor an appropriate eﬀectiveness
+metric based on this model were proposed. As we will dis-
+cuss in the next section, a variety of evaluation metrics are
+used in the query suggestion literature. Often, these metrics
+are selected without justifying their alignment with the user
+satisfaction, hence it is not necessarily clear if the improve-
+ments reported would result in an actual improvement in
+the users’ experience.
+
+In this paper, we address these gaps and consider our con-
+
+tribution to be four-fold:
+
+• We study the ways users interact with the query sug-
+gestion mechanism, as it is observed in the session logs,
+and propose a simple cascade model of the user be-
+haviour on top of these observations;
+
+• We introduce an algorithm to learn the parameters of
+
+the model;
+
+• We propose a family of eﬀectiveness metrics, called
+Saved parametrised by a user model and study several
+possible instantiations of these metrics;
+
+• We perform a thorough experimental study of the con-
+sidered user models and evaluation metrics, as well as
+the evaluation metrics used in the literature.
+
+The remainder of this paper is organised as follows. After
+reviewing some related work in Section 2, we study the ways
+that users interact with a query suggestion mechanism and
+propose a simple user model in Section 3. In Section 4, we
+introduce an algorithm to learn the parameters of the user
+model from the session log. Next, we brieﬂy discuss the
+considered evaluation framework in Section 5. Further, we
+introduce a novel family of evaluation metrics, called Saved,
+and discuss its connection to other metrics used in informa-
+tion retrieval in Section 6. Section 7 describes a methodology
+we use to compare the proposed user models and metrics.
+The dataset used in our experiments is presented in Section
+8. We report and discuss the experimental results in Sec-
+tion 9. Finally, we close the paper with some conclusions
+and future work discussion in Section 10.
+
+2. RELATED WORK
+
+We consider our work to be mostly related to three ar-
+eas of research: the user model-based evaluation metrics,
+the methods used to compare the eﬀectiveness metrics, and
+the metrics used to evaluate query suggestions. Models of
+user search behaviour and their connection to the evaluation
+metrics gained a lot of attention in the web search domain
+and inspired us to follow this direction in our work (Sec-
+tion 2.1). Given a variety of metrics, the question arises
+how to compare them and this problem received a consider-
+able attention in the research community (Section 2.2). We
+ﬁnish the overview of the related work with the discussion
+of the methods and metrics used in the evaluation of query
+suggestion previously used in the literature (Section 2.3).
+2.1 User model-inspired IR metrics
+
+One of the state-of-the-art web search evaluation metrics,
+Expected Reciprocal Rank (ERR), has a strong relation with
+a cascade model of the user behaviour and is deﬁned as
+part of the cascade-based family of metrics [6]. The cascade
+model assumes that a user examines a list of ranked docu-
+ments one-by-one, from top to bottom. After examining the
+document on the ith position, either the user is satisﬁed and
+stops the examination process or continues to the document
+on the position i + 1. The probability of satisfying a user
+depends on the document’s relevance. A cascade-based met-
+ric is the expectation of a utility function φ(r), where r is
+the rank where the user ﬁnds the document she was looking
+for [6]. In case of ERR, the utility function φ(r) is equal to
+1
+r .
+
+An extension of ERR based on the cascade model with
+abandonment [7] was also discussed in [6]. Apart from being
+based on a diﬀerent user model, this extension leverages a
+diﬀerent utility function which is equal to 1 if the user ﬁnd
+a satisfactory result, and 0 otherwise. As a result, the value
+of this metric is equal to the probability of the user ﬁnding
+a relevant result as predicted by the underlying user model.
+The Expected Browsing Utility (EBU) is another search
+eﬀectiveness evaluation metric proposed by Yilmaz et al. [21],
+which is deﬁned as the expected document utility a user “col-
+lects” while examining a result list. As a basis, EBU uses
+a more sophisticated cascade user model that accounts for
+snippet attractiveness.
+
+The user model that we propose in this paper can be con-
+sidered as related to the cascade family and the eﬀectiveness
+metrics we introduce resemble the cascade family of the web
+search eﬀectiveness metrics, but applied to the query sug-
+gestion domain with diﬀerent user behaviour patterns.
+2.2 Comparing IR metrics
+
+Since the aim of the evaluation is to predict whether the
+retrieval system meets the user needs, it is natural to require
+the values of evaluation metrics to be aligned with the user
+preferences. A considerable eﬀort was deployed to ensure
+that the metrics used in the web search evaluation setting
+meet this criterion. However, the papers in the literature
+diﬀer in the way the user preferences are obtained.
+
+Some authors conducted online user-based studies to ad-
+dress this question. For instance, Radlinski and Craswell [15]
+studied the agreement between Cranﬁeld-based measures
+such as MAP and nDCG with results of online user-based
+evaluation experiments. Sanderson et al. [17] compared the
+outcomes of a large-scale side-by-side evaluation of retrieval
+
+634systems performed by MTurkers with a preference relation
+over these systems imposed by Cranﬁeld-based measures
+such as nDCG, MRR and Precision@10 as well as the di-
+versity measures including α-nDCG [8], cluster recall and
+intent-aware precision.
+
+The methodology considering user preference evidence in
+the session logs was also proposed. Chapelle et al. [6] sup-
+ported ERR by a series of experiments which demonstrate
+that ERR shows better alignment with the user behaviour
+data in comparison with other widely used metrics. These
+experiments fall into two diﬀerent categories. Firstly, the au-
+thors demonstrate that across diﬀerent queries and possible
+rankings, ERR is better correlated with user click metrics
+such as search success rate. Secondly, in a simulated ex-
+periment it was shown that the diﬀerence in ERR of two
+ranking functions is better correlated with the diﬀerence in
+actual user preferences in comparison with other metrics. A
+similar approach to compare various metrics used to evalu-
+ate diversiﬁed result set was leveraged in Chappelle et al.’s
+work [5].
+
+The evaluation methodology we use in this paper is in-
+ﬂuenced by the methods of Chapelle et al. [6], in that we
+compare the considered metrics in terms of their correlation
+with the user preferences observed in historical query logs.
+2.3 Query suggestion evaluation
+
+Shokouhi et al. [18] evaluated the quality of suggestions for
+a given preﬁx by the mean reciprocal rank of the most pop-
+ular results (MRR), and the Spearman correlation between
+the predicted and ground-truth ranks of the selected queries.
+These metrics were averaged over a set of test preﬁxes. Con-
+sidering a query as relevant if it is top-ranked according to
+the ground-truth query frequencies, Strizhevskaya et al. [19]
+reported P@3, AP@3 and nDCG@3 averaged over the ob-
+served preﬁxes.
+
+Bar-Yossef and Kraus [2] used a session log-based ap-
+proach for evaluation, which aimed to emulate user expe-
+rience. From a session in the log, they extracted the user’s
+context and the submitted query. After that, the sugges-
+tions are ﬁltered to have the ﬁrst character of the query as
+a preﬁx and ranked according to the user’s context. The
+quality of the ranking is assessed as a reciprocal rank of the
+user’s query in this ranked list of suggestions, weighted by
+the number of completions available for the preﬁx. They
+reported the weighted mean reciprocal rank (wMRR) aver-
+aged over the query-context pairs.
+
+Duan and Hsu [12] used the minimal number of key presses
+the user has to make in order to issue the target search
+query (Minimal Keystrokes, MKS) to evaluate query correc-
+tions. This metric evaluates the eﬀectiveness of the sugges-
+tion mechanism with respect to the user who always selects
+the optimal way of submitting a query.
+
+As we can see from the related work, the query suggestion
+eﬀectiveness metrics used in the literature are not speciﬁ-
+cally designed to reﬂect user satisfaction nor has their suit-
+ability been empirically shown. Following research in the
+web search evaluation, we address this gap by ﬁrstly mod-
+elling the user behaviour in Section 3 and devising an eﬀec-
+tiveness metric upon it later in Section 6.
+
+3. USER MODEL
+
+The interface usually used to present query suggestions
+leads to the following process of users’ interaction with the
+
+Ni
+
+Ni+1
+
+Eij
+
+qij
+
+Sij
+
+j
+
+i
+
+Figure 1: Graphical model of the user behaviour.
+Grey circles correspond to latent variables.
+
+query suggestion mechanism. Let us suppose that a user is
+going to submit a query q to a search engine. After typing
+each character, the list of suggestions is changed to match
+the updated input and the user has a chance to examine
+the list before typing the next character. The examination
+is performed in steps and at the jth step the user either
+examines the query suggested on the jth position or skips
+it. If the query q is suggested by the system and examined
+by the user, she selects it from the list and that ends the
+interaction with the query suggestion mechanism.
+In the
+worst case, the user types the entire query q manually.
+
+In order to build a user model upon this interaction schema,
+we assume that the user’s behaviour satisﬁes the Markovian
+assumption, i.e. that given the user’s current state, all of
+the future user’s actions are independent from her earlier
+behaviour. The Markovian assumption is often used in the
+web search behaviour models, e.g. the cascade model [11]
+describes the user’s click behaviour as a Markovian process.
+The underlying graphical model is depicted in Figure 3.
+Denoting the preﬁx of the query q of length i as q[1..i] and
+the query suggested on position j after submitting q[1..i] as
+qij, we introduce the following random variables used in the
+graphical model:
+
+• Ni: was the ith character of the query q submitted,
+• Eij: is the query suggested on position j for the preﬁx
+
+q[1..i] (qij) examined,
+
+• Sij: is the user satisﬁed with qij after submitting q[1..i],
+• Tij: is a variable denoting the user’s state on the jth
+
+step after submitting q[1..i]
+
+The model can be described using the following system
+of equations in terms of the random variables introduced
+above:
+
+N1 = 1
+Ni = 0 ⇒ Nk = 0, k = (i + 1)...|q|
+Ni = 0 ⇒ ∀j Eij = 0
+P (Eij|Tij) = f (Tij)
+
+(1a)
+
+(1b)
+
+(1c)
+
+(1d)
+
+635Eij = 0 ⇒ Sij = 0
+Sij = 1 ⇔ Eij = 1, qij = q
+∃j : Sij = 1 ⇒ Ni+1 = 0
+∀j Sij = 0, i < |q| ⇒ Ni+1 = 1
+|q| = i, ∀j Sij = 0 ⇒ Ni+1 = 0
+
+(1e)
+
+(1f)
+
+(1g)
+
+(1h)
+
+(1i)
+
+Indeed, the above equations describe the following con-
+straints on the model: The ﬁrst character is always submit-
+ted (1a); Characters are submitted sequentially (1b); Only
+the suggestions for the submitted preﬁxes can be examined
+(1c); The probability of examining the query suggested on
+the jth position is a function of the user’s state (1d); A
+non-examined query suggestion cannot satisfy the user (1e);
+Examination of the query q is necessary and suﬃcient for the
+user to be satisﬁed, i.e. after examining the query q the user
+is always satisﬁed (1f)1; A satisﬁed user stops interaction
+with the query suggestion mechanism (1g); An unsatisﬁed
+user types the query until its end (1h) & (1i).
+
+In the model described above, we do not specify the exact
+form of dependence of examination probabilities from the
+user’s state and denoted it as a function f (Tij). Varying the
+form of this dependence we can obtain diﬀerent user models.
+For instance, the following functions can be considered:
+
+1. The user always examines all the suggested queries:
+
+f1(Tij) = 1;
+
+2. The examination probability depends only on position
+j and decays under reciprocal frr(Tij) = 1/(j + 1) or
+logarithmic flog(Tij) = 1/ log2(j + 2) laws2;
+
+3. The examination probability depends only on the po-
+
+sition: f i
+
+l (Tij) = Aj;
+
+4. The examination probability depends not only on the
+l (Tij) = Bij;
+
+position, but also on the preﬁx length: f d
+
+l (Tij) and f d
+
+The functions f i
+
+l (Tij) depend on parameters,
+Aj and Bij.
+Instead of using heuristic functions such as
+frr(Tij) or flog(Tij), these parameters can be learned to ob-
+tain a model that better reﬂects the user behaviour. In the
+following, we discuss an algorithm to adjust these parame-
+ters to the user behaviour observed in a session log.
+
+The proposed model of the user behaviour is related to
+the cascade model [11] of the user’s search click behaviour.
+Indeed, the user continues to type his query if and only if
+she is not satisﬁed with the current suggested queries. On
+the other hand, the process of examination of the list of
+suggestions resembles one considered in the position-based
+user models [11].
+
+1Queries that have been seen by the user, but not se-
+lected from the suggestions list are also considered as non-
+examined. This do not inﬂuence generality of our proposed
+model.
+2The logarithmic and reciprocal rank decays are used in
+DCG [14] and MRR web search metrics, respectively. We
+shift both functions so they start on the second rank posi-
+tion for two reasons: 1) the resulting probabilities are closer
+to those observed in our query log; 2) we avoid singularities
+in the user model evaluation in Section 7.1.
+
+Input: Q: a set of sessions with the query suggestion
+
+mechanism used
+
+Output: Examination probabilities Aj, Bij
+Initialise ∀i, j Ac
+ij = 0, Bs
+j = 0, As
+foreach session ∈ Q do
+
+j = 0, Bc
+foreach i ∈ 1..|q(session)|, j do
+
+ij = 0
+
+if qij(session) = q(session) and qij not clicked
+then
+j ← As
+As
+ij ← Bs
+Bs
+
+j + 1
+ij + 1
+
+end
+if qij(session) = q(session) and qij clicked
+then
+j ← Ac
+Ac
+ij ← Bc
+Bc
+
+j + 1
+ij + 1
+
+end
+
+end
+
+end
+foreach j do
+Aj ← Ac
+j
+j +As
+j
+
+Ac
+
+end
+foreach i, j do
+Bij ← Bc
+ij
+
+Bc
+
+ij +Bs
+ij
+
+end
+Algorithm 1: Learning the preﬁx length-independent Aj
+and the preﬁx length-dependent Bij probabilities of exam-
+ination of a query suggestion presented on position j for a
+preﬁx of length i.
+
+4. LEARNING THE MODEL PARAMETERS
+Let us consider a session with a query q submitted by
+selecting it from the list of queries suggested to a preﬁx
+q[1..l] on position k. Before the interaction stopped, the
+following random events took place. The user skipped the
+query q each time it was suggested for a preﬁx shorter than l.
+The probability of this is equal to the following expression:
+
+Pskip =
+
+I(q = qij)P (Eij)
+
+(cid:35)
+
+(cid:35)
+
+l(cid:89)
+
+(cid:34)
+1 −(cid:88)
+
+i=1
+
+j
+
+l(cid:89)
+
+(cid:34)
+1 −(cid:88)
+
+i=1
+
+j
+
+where I(q = qij) equals 1 if the query q was suggested on
+position j for the preﬁx q[1..i], and 0 otherwise. Further, the
+user examined kth suggested query for preﬁx q[1..l]. Thus,
+the likelihood of the entire session is as follows:
+
+L(s) =
+
+I(q = qij)P (Eij)
+
+P (Elk)
+
+By l(s) we denote the length of the preﬁx typed in the
+session s. Substituting P (Eij) with f (Tij) the log-likelihood
+of a set of sessions Q can be represented in the following
+form:
+
+(1 − I(qij = q)f (Tij))1−Sij · f (Tij)Sij(cid:105)
+(cid:104)
+
+(cid:88)
+
+l(s)(cid:88)
+
+(cid:88)
+
+ˆL =
+
+log
+
+s∈Q
+
+i=1
+
+j
+
+(2)
+The log-likelihood expressed in Equation (2) can be max-
+imised with respect to the function f to ﬁnd maximum like-
+lihood estimates (MLE) of its parameters. Assuming that
+P (Eij) are binomial random variables determined by the
+preﬁx length-independent f i
+l or the preﬁx length-dependent
+
+636f d
+functions, discussed in the previous section, we can ﬁnd
+l
+MLE estimates of their parameters, Aj and Bij. These esti-
+mates can be found by means of Algorithm 1, which resem-
+bles the learning process for obtaining the parameters of the
+cascade model [11]. Assuming that the user’s examination
+process is the same for sessions with the query suggestion
+mechanism used and for sessions where it is not used, we
+restrict Algorithm 1 to process only sessions with the sug-
+gestion mechanism used in order to avoid noise caused by
+copy-pasted queries.
+
+l and f d
+
+The functions f i
+
+l with parameters Aj and Bij, re-
+spectively optimised on a training part of a dataset described
+in Section 8 are reported in Table 1. We additionally report
+values of frr and flog for comparison.
+
+Based on an analysis of Table 1, the following conclu-
+sions can be made. Firstly, the probability of examina-
+tion Eij indeed shows considerable dependence on the pre-
+ﬁx length i:
+for shorter preﬁxes, the users tend to exam-
+ine the suggested queries more carefully. For instance, the
+probability of examination of the ﬁrst position changes from
+f d
+l (T1,1) = 0.55 for preﬁxes of length 1 to f d
+l (T6,1) = 0.33
+in case of preﬁxes of length 6. Another observation is that
+the probabilities of examination for a ﬁxed position become
+almost stationary for preﬁxes longer than four characters,
+e.g. f d
+
+l (T4,1) = f d
+
+l (T5,1) = f d
+
+l (T6,1).
+
+Even if one considers the approximation of the probabili-
+ties of examination to be independent from the preﬁx length,
+the resulting probabilities estimated from the query logs (the
+function f i
+l ) are diﬀerent from the one imposed by the po-
+sition discount functions often considered in other domains
+of information retrieval: the ﬁrst two positions have consid-
+erably lower chances to be examined (f i
+l (T1,1) = 0.36) than
+it is predicted by flog (flog(T1,1) = 0.63) or frr (frr(T1,1) =
+0.5) functions. Also, it is noticeable that the reciprocal rank
+function decays with the suggestion rank faster than the ex-
+amination probabilities learned from the user behaviour in
+the session log.
+
+We have introduced the user model, its possible instan-
+tiations and the algorithm to learn their parameters from
+the session log. Before deﬁning the proposed user model-
+based eﬀectiveness metrics in Section 6, we ﬁrstly describe
+the evaluation framework we are working within and which
+we deﬁne in Section 5.
+5. OFFLINE EVALUATION OF QUERY
+
+SUGGESTIONS
+
+Before deﬁning new eﬀectiveness metrics for the query
+
+suggestion evaluation we need to discuss our evaluation frame-
+work used to evaluate a query suggestion mechanism. We
+use the same query log-based approach as used in [2] which
+falls into the user-based oﬄine category of the evaluation ap-
+proaches discussed in Section 1. In this section, we discuss
+the evaluation scenario imposed by the framework, its re-
+strictions and how it compares to the experimental method-
+ologies used in the query suggestions literature.
+
+In the case of query suggestions domain, the considered
+approach implies the following evaluation algorithm. Given
+a query suggestion mechanism with a ranking function r and
+a log of user sessions Q, the evaluation is performed in three
+steps. At the ﬁrst step, the process of submitting a query q ∈
+Q is simulated as if a user typed it. For each preﬁx q[1..i], all
+of the possible candidate suggestions are ranked according
+to the ranking function r, i.e. the simulated user is presented
+
+with a ranked list of suggestions r(q[1..i]). Considering q as
+the only query relevant to a user, this simulated output is
+used to estimate the eﬀectiveness metric. Finally, the metric
+is averaged over all simulated sessions.
+
+In order to perform such an evaluation, a query log is
+needed. However, we consider this requirement as not re-
+strictive in the query suggestions eﬀectiveness assessment,
+since query suggestion mechanisms are often built upon the
+query log mining [1].
+
+We believe that this approach is suﬃciently general to
+cover several interesting evaluation scenarios, e.g. the mini-
+mal dataset required to evaluate the query suggestion mech-
+anism includes only queries (and possibly their frequencies).
+In the more advanced setting, the same methodology is suit-
+able to evaluate personalisation algorithms by associating
+each session with the context (e.g. [2, 18, 19]) or the user’s
+long-term proﬁle. It is also noticeable that this evaluation
+scenario generalises other approaches to evaluate query sug-
+gestions discussed in the literature. Strizhevskaya et al. [19],
+as well as Shokouhi and Radinksy [18] both sampled the test
+sets of preﬁxes and evaluated the considered systems by as-
+sessing how good the most popular preﬁx completion was
+ranked having this preﬁx as the user input. It is possible to
+consider their methodology as a special case of the evalua-
+tion approach used in this paper. Indeed, considering the set
+of popular queries for all the test preﬁxes, one can generate
+simulated sessions with users submitting these preﬁxes and
+measuring the system eﬀectiveness afterwards.
+
+Guided by this evaluation scenario, in the next section we
+
+introduce novel evaluation metrics for query suggestions.
+
+6. PROPOSED METRICS
+
+As we mentioned in Section 1, the family of cascade-based
+metrics (e.g. ERR [6]) is deﬁned as the expectation of a
+utility function at a position the user ﬁnds the result she is
+looking for. In order to generalise this family to the query
+suggestion evaluation, let us recall the notation previously
+used in Section 3. We denote the query to be submitted as
+q and its length as |q|. A preﬁx of q of length i is referred
+to as q[1..i]. Eij is a binary variable equal to 1 if a query
+suggestion for the preﬁx q[1..i] ranked on the jth position is
+examined by the user, Sij is a binary variable representing
+if the user was satisﬁed with the jth suggestion shown for
+the preﬁx q[1..i]. qij denotes a suggested query ranked on
+position j after submitting q[1..i]. Tij is a variable denoting
+the user’s state, and U (Tij) is a utility function.
+
+Using this notation, we can adapt the notion of the cascade-
+
+based metric V (q) to the query suggestion evaluation:
+
+V (q) =
+
+U (Tij)P (Sij = 1)
+
+(3)
+
+j P (Sij = 1) equals to the probability to stop af-
+ter submitting q[1..i]. The question arises how to choose the
+utility function. In the simplest case, one can deﬁne the util-
+ity function to be a binary indicator of success: I(Sij) equals
+1 if the user used the query suggestions, and 0 otherwise. A
+similar utility function was used by Chapelle et al. [6] to
+build the modiﬁcation of ERR based on the cascade model
+with abandonment. Given such an utility function, the met-
+ric equates to the probability of the user using the query
+suggestion mechanism. We refer to this metric as pSaved,
+
+|q|(cid:88)
+
+(cid:88)
+
+i=1
+
+j
+
+where (cid:80)
+
+637Table 1: Probability of examination. frr(j), flog(j) and f i
+logarithmic, reciprocal and learned examination probabilities, respectively. f d
+dependent probabilities of length i, as learned from the query log.
+
+l (j) correspond to the preﬁx length-independent
+l (i, j) denotes the preﬁx length-
+
+Query rank, j
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+frr(j)
+flog(j)
+f i
+l (j)
+
+f d
+l (1, j)
+f d
+l (2, j)
+f d
+l (3, j)
+f d
+l (4, j)
+f d
+l (5, j)
+f d
+l (6, j)
+
+0.50
+0.63
+
+0.33
+0.50
+
+0.25
+0.43
+
+0.20
+0.39
+
+0.17
+0.36
+
+0.14
+0.33
+
+0.13
+0.32
+
+0.11
+0.30
+
+0.10
+0.29
+
+0.36
+
+0.24
+
+0.20
+
+0.19
+
+0.17
+
+0.16
+
+0.16
+
+0.16
+
+0.16
+
+0.15
+
+0.55
+0.56
+0.29
+0.33
+0.33
+0.33
+
+0.38
+0.34
+0.23
+0.27
+0.27
+0.27
+
+0.26
+0.31
+0.21
+0.23
+0.23
+0.23
+
+0.29
+0.26
+0.18
+0.21
+0.21
+0.21
+
+0.24
+0.22
+0.17
+0.19
+0.19
+0.19
+
+0.19
+0.20
+0.16
+0.18
+0.18
+0.18
+
+0.20
+0.18
+0.16
+0.18
+0.18
+0.18
+
+0.19
+0.18
+0.15
+0.18
+0.18
+0.18
+
+0.18
+0.17
+0.15
+0.18
+0.18
+0.18
+
+0.17
+0.14
+0.14
+0.16
+0.16
+0.16
+
+10
+
+0.09
+0.28
+
+and it is formally deﬁned as follows:
+
+pSaved(q) =
+
+I(Sij)P (Sij = 1) =
+
+|q|(cid:88)
+
+(cid:88)
+
+i=1
+
+j
+
+|q|(cid:88)
+
+(cid:88)
+
+i=1
+
+j
+
+P (Sij = 1)
+
+(4)
+A more complicated utility function might decrease if it
+takes the user more eﬀort3 to ﬁnd the satisfactory result and
+thus it can be considered as a formalisation of the amount
+of the eﬀort the user can avoid due to the retrieval system
+under consideration. In the case of a query suggestion mech-
+anism, the user’s eﬀort can naturally be represented as the
+number of characters (keypresses) the user has to type to
+submit her query to the system. Supported by this intu-
+ition, we propose the metric eSaved, which is deﬁned as the
+expected ratio of characters a user can skip inputting until
+her query is submitted. The query can be submitted either
+by selecting it from the suggested list of queries or by fully
+entering the query. Formally, eSaved can be calculated us-
+ing the following expression:
+
+(cid:18)
+
+|q|(cid:88)
+
+i=1
+
+1 − i
+|q|
+
+(cid:19)(cid:88)
+
+j
+
+P (Sij = 1)
+
+(5)
+
+eSaved(q) =
+
+(cid:16)
+1 − i|q|
+
+(cid:17)
+
+where
+
+is the utility function.
+
+Both proposed metrics, pSaved and eSaved are parame-
+terised by the user model, which deﬁnes the probability of
+the user satisfaction P (Sij = 1). In the user model proposed
+in Section 3, this probability is deﬁned by Equations (1d),
+(1e) and (1f). The user is satisﬁed with a suggested query
+qij, only if it is the target query (qij = q) and if it is also
+examined (Eij = 1):
+
+Sij = 1 ⇔ Eij = 1, qij = q
+
+In order to get an additional insight into the diﬀerence
+between the proposed metrics, we re-group Equation (5) in
+the following form:
+
+eSaved(q) =
+
+P (Sij = 1) −
+
+P (Sij = 1)
+
+i=1
+
+j
+
+i=1
+
+j
+
+(6)
+Comparing (4) and (6) we notice that eSaved equals to
+pSaved minus the expected part of the query the user needs
+
+3The utility function used in ERR degrades as the user ex-
+amines more retrieved results.
+
+|q|(cid:88)
+
+(cid:88)
+
+(cid:88)
+
+|q|(cid:88)
+
+i
+|q|
+
+to type to submit query q. As a result, eSaved additionally
+stratiﬁes queries with equal chances to satisfy the user, ac-
+cording to the relative length of the query the user need to
+type.
+
+This ability of eSaved to leverage this additional “dimen-
+sion” to assess the query suggestion ranking functions can be
+particularly useful for longer queries where its utility func-
+tion has a wide spectrum of values. We believe that im-
+provements in the query suggestions for longer queries have
+a high inﬂuence on the user experience. Indeed, when sub-
+mitting a long query, the suggestion mechanism can save
+greater eﬀort for the user than in the case of a short query.
+In this section, we proposed two novel metrics to evaluate
+the eﬀectiveness of the query suggestions. However, it is
+unclear how one can compare eﬀectiveness metrics and in
+the next section we discuss this issue.
+7. EVALUATION METHODOLOGY
+
+Our empirical study has the following goals. The ﬁrst goal
+is to investigate the user model instantiations introduced in
+Section 3 compare to each other in terms of ﬁtness to the ob-
+served user behaviour in the data. Each of these user models
+induces a corresponding metric from the Saved family and
+the question arises how well these metrics are aligned with
+the user behaviour data.
+It is also important to compare
+the proposed metrics with the ones previously used in the
+literature.
+
+In order to answer these questions we perform a series of
+experiments with the methodology described in this section.
+7.1 User model evaluation
+
+The eﬀectiveness of the user models is often studied by
+means of measuring the log-likelihood on the test data, e.g.
+[22]. The log-likelihood is deﬁned as the average log prob-
+ability of the events observed in the test dataset according
+to the probabilistic model under consideration.
+
+Let s be a session from a dataset of sessions Q, qs denotes
+the query submitted by the user in the session s and C i
+s is
+a binary indicator representing if the user’s interaction with
+the query suggestions ended (i.e. no additional characters
+were typed) after submitting the preﬁx qs[1..i]. By deﬁni-
+|qs|
+tion, C
+s = 1 if the user typed the entire query. Again, l(s)
+denotes the number of characters submitted in session s.
+
+In the case of the query suggestions, the log-likelihood
+of the user model measures how well this model predicts
+
+638a preﬁx which the user typed before submitting the query.
+More formally, the log-likelihood of the model on the session
+with the submitted query q is deﬁned in the following way:
+
+L(q) =
+
+P (C i
+
+s) log2 P (C i
+
+s) + (1 − C i
+
+s) log2(1 − P (C i
+s))
+
+(cid:105)
+
+l(s)(cid:88)
+
+(cid:104)
+
+i=1
+
+The overall log-likelihood is calculated as the average of the
+session likelihoods:
+
+(cid:88)
+
+q∈Q
+
+LL(Q) =
+
+1
+|Q|
+
+Another measure widely used to evaluate the performance
+of click models is the average perplexity for top ten positions
+[13]. However, since the queries diﬀer in their length and the
+number of suggestions available, the perplexity becomes less
+intuitive in the considered case.
+7.2 Metrics evaluation
+
+In order to compare the considered metrics we adapt the
+evaluation methodology from Chapelle et al. [6] which is also
+used in Chapelle et al. [5]. This methodology is aimed to
+show how good the tested metrics are aligned with the user
+satisfaction indicators. Chapelle et al. considered diﬀerent
+click measures as indicators of the user interest, such as the
+search abandonment rate, the position of the ﬁrst click and
+others. We believe that the query suggestion mechanism can
+be considered as useful and successful in a particular session
+if the user used it to submit her query. Thus we use the
+query suggestion mechanism’s usage frequency (how often
+the query suggestion mechanism is used by users to submit
+their queries) as a ground-truth indicator of the user satis-
+faction. In the following, we refer to this value as success
+rate (SS). In general, other indicators of user satisfaction
+can be considered, e.g. mean ratio of characters a user can
+skip inputting until her query is submitted. The indicator
+selected might inﬂuence the evaluation result and should be
+chosen in agreement with the query suggestion mechanism’s
+performance indicators.
+
+Due to various personalisation algorithms, geographical
+contextualisation features, drifts in query popularity and
+changes in suggestion mechanism, diﬀerent users may be
+presented diﬀerent suggested queries while submitting the
+same query. We denote by conﬁguration c a unique sequence
+of queries suggested for query q.
+
+The considered metric evaluation method [5] is performed
+in two steps. Firstly, given a dataset of user sessions one
+can estimate the values of the considered metrics for each
+conﬁguration observed by a user. On the other hand, for
+each conﬁguration shown to the users the average value of
+the success rate can be calculated.
+In the next step, the
+correlation between these two values across conﬁgurations
+is calculated.
+
+As discussed by Chapelle et al. [6], this approach has one
+Indeed, the correlation measures the
+possible drawback.
+alignment of the metrics with the user satisfaction across
+conﬁgurations and queries, i.e. it also measures how useful
+the metric is to compare the eﬀectiveness of diﬀerent queries.
+However, in a real-life scenario, the primary goal of a metric
+is to compare diﬀerent ranking functions of query sugges-
+tions given a ﬁxed set of queries. Therefore, another metric’s
+feature is essential: if, given a ﬁxed set of queries one rank-
+ing algorithm outperforms its counterpart in terms of the
+
+L(q)
+
+end
+
+Input: Q: a dataset of user sessions
+Output: Correlation between query suggestion success
+foreach i ∈ 1..1000 do
+
+rate SS and a eﬀectiveness metric M
+
+foreach query q ∈ Q do
+
+Cq ← set of conﬁgurations of q
+if |Cq| ≥ 2 then
+
+c1, c2 ← two random conﬁgurations from Cq
+Assign c1 to a simulated system r1, c2 to a
+simulated system r2
+
+end
+Compute average value of M for r1 and r2
+Compute average value of SS for r1 and r2
+
+end
+Return correlation between diﬀerences in M and SS for
+all simulated pairs of r1 and r2
+Algorithm 2: Algorithm used to evaluate if the diﬀerence
+in eﬀectiveness metric values correlated with the diﬀerences
+in user satisfaction proposed in [6].
+
+considered metric, does this necessarily imply that the ﬁrst
+algorithm has higher user satisfaction once deployed? There
+is a possibility that a particular metric can exhibit poor per-
+formance when comparing eﬀectiveness across queries but
+exhibit a good alignment with the user satisfaction from the
+ranking function comparison perspective.
+
+In order to study the metric quality from the latter point
+of view, we perform an experiment proposed by Chapelle
+et al. [6], which simulates a comparison of the ranking func-
+tions scenario. The description can be found in Algorithm 2.
+Informally, the idea behind the algorithm is as follows. For
+each query with at least two conﬁgurations in the session
+log, conﬁgurations c1 and c2 are randomly sampled. These
+conﬁgurations and the corresponding sessions are associated
+with two simulated ranking functions, r1 and r2, as if all ses-
+sions with c1 and c2 shown to the users were served by rank-
+ing algorithms r1 and r2, respectively. After that, the aver-
+age values of the considered metric M and the user satisfac-
+tion indicator SS are calculated for both systems. Then, the
+diﬀerences of the user satisfaction indicator SS(r1)− SS(r2)
+and the eﬀectiveness metric values r1 and r2, M (r1)−M (r2)
+are found. Finally, after repeating this simulation, the cor-
+relation between the metric and the satisfaction indicator
+diﬀerences is returned.
+
+8. DATASET
+
+Before discussing the experimental results in the next sec-
+tion, we shortly describe the dataset used in this paper. The
+dataset was randomly sampled from the query log of a com-
+mercial search engine. The search sessions were performed
+by users from a European country with two non-English lan-
+guages4 widely spoken during two consecutive workdays in
+January 2013. In order to reduce noise in our evaluation,
+we applied the following ﬁltering procedure to the dataset.
+Firstly, we do not consider sessions with misspelled queries,
+leaving the adaptation of the proposed models to misspelled
+
+4We believe that results we report in this paper generalise
+across diﬀerent languages. However, we leave the experi-
+mental veriﬁcation of this assumption as future work.
+
+639queries as a direction of future work. We also removed ses-
+sions where users selected a query from the suggested list and
+edited it afterwards since it is unclear if the query suggestion
+mechanism was useful in these sessions. All queries were nor-
+malised to the lower case, since the character capitalisation
+is typically ignored by query suggestion mechanisms. Fi-
+nally, only query sessions with the query suggestions shown
+were sampled.
+
+As a result, the dataset contains 6.1M query sessions,
+3.8M unique conﬁgurations and 3.3M unique queries. The
+mean query length is 26.4, the median is 24.0 characters.
+The mean number of whitespace delimited terms is 3.3, the
+median is 4.0. The length of the query suggestion lists was
+restricted by the deployed query suggestions mechanism to
+be no longer than 10.
+
+The sessions from the ﬁrst day were used to estimate the
+user model parameters discussed in Section 3, while the eval-
+uation of the models and the eﬀectiveness metrics compari-
+son were performed on the subset of sessions performed on
+the second day.
+9. RESULTS AND DISCUSSION
+
+We split our evaluation experiments into two parts. Firstly,
+we discuss the experimental evaluation of the user models
+(Section 9.1). After that, we report the results of the eﬀec-
+tiveness metrics evaluation (Section 9.2).
+9.1 User model evaluation
+
+l and f d
+
+The results of the user model evaluation on the test dataset
+are reported in Table 2. We report the log-likelihood of the
+models with the following functions determining the proba-
+bility of examination of the query suggestions discussed in
+Section 3: frr, flog, f i
+l . The ﬁrst three functions
+correspond to the probability examination functions which
+are independent from the preﬁx length, while the last one is
+l and f l
+the preﬁx length-dependent. The parameters of f i
+d
+are learned from the train dataset by means of Algorithm 1.
+We repeat the experiment several times, splitting queries in
+groups according to their absolute frequency and length. All
+reported diﬀerences are statistically signiﬁcant according to
+the paired t-test, p ≤ 10−3 except for pairs labelled by 3,
+which do not statistically signiﬁcant diﬀer.
+
+As seen from Table 2, the models with the probabilities of
+examination learned from the query log (f i
+l ) exhibit
+a better ﬁt than the models parameterised by the heuristic
+functions on every subset of queries considered, except for
+the queries of length less than 10 characters, since they are
+not “typical” for the training dataset (median query length
+is 24.0 characters). In particular, f d
+l shows the best ﬁtness
+to the whole dataset.
+
+l and f d
+
+Overall, we conclude that adjusting the model parameters
+to the user behaviour in the session log leads to statistically
+signiﬁcant improvements in the model’s ability to “explain”
+the data in the dataset. The question now is whether this
+improvement leads the user model-based eﬀectiveness met-
+rics to have a higher alignment with the user preferences.
+We study this issue in the next section.
+9.2 Metrics evaluation
+
+Results of the two metric evaluation experiments are pre-
+sented in Tables 3 and 4. The correlation coeﬃcients are
+statistically signiﬁcant with p ≤ 10−3, in each column (cid:52)
+denotes a group of values which statistically signiﬁcantly
+
+Table 2: Log-likelihood of the user models param-
+eterised by diﬀerent examination probability func-
+tions. A higher log-likelihood corresponds to a bet-
+ter ﬁt to the data.
+In each row all pairwise dif-
+ferences are statistically signiﬁcant, except for the
+pairs labelled with 3.
+
+frr
+
+flog
+
+f i
+l
+
+f d
+l
+
+All queries
+
+-3.27
+
+-3.84
+
+-3.16
+
+-3.10
+
+Query frequency
+
+frr
+
+1 - 10
+10-102
+102-103
+> 103
+
+-3.66
+-3.54
+-3.25
+-2.01
+
+flog
+
+-4.40
+-4.23
+-3.76
+-2.03
+
+f i
+l
+
+f d
+l
+
+-3.463 -3.473
+-3.373 -3.363
+-3.12
+-1.92
+
+-3.14
+-2.19
+
+Query length
+
+frr
+
+flog
+
+f i
+l
+
+f d
+l
+
+1 - 10
+11-20
+21-30
+> 31
+
+-1.85
+-2.74
+-3.91
+-4.32
+
+-1.68
+-2.94
+-4.84
+-5.57
+
+-2.07
+
+-1.86
+
+-2.743 -2.733
+-3.63
+-3.92
+
+-3.66
+-3.97
+
+outperform other values and do not statistically signiﬁcant
+diﬀer from each other with p ≤ 0.05. We applied Holm-
+Bonferroni adjustment for multiple comparisons when re-
+quired. To report these results, we use the following no-
+tation. pSaved(f ) corresponds to a metric of the pSaved
+family, parameterised by function f , e.g. pSaved(f i
+l ) is a
+metric obtained by assuming the model of user behaviour
+with probabilities of examination determined by function f i
+l .
+Similarly, eSaved(frr) is the eSaved metric parameterised
+by frr.
+
+MRR-n is a metric which is deﬁned as the reciprocal rank
+of the submitted query q after submitting the ﬁrst n charac-
+ters of the query. For queries shorter than n characters we
+deﬁne MRR-n to be equal to MRR-|q|. Ranks higher than
+10 are considered to be inﬁnitely large (i.e., MRR-1 and
+MRR-3 are equal to 0 if the submitted query is ranked on
+positions below 10). The MRR metric is used in [18], though
+in a diﬀerent evaluation scenario, as discussed in Section 5.
+By wMRR-n we denote a modiﬁcation of MRR-n weighted
+by the number of suggestions available for the corresponding
+query preﬁx, as used in [2].
+
+MKS (Minimal Keystrokes) is a metric proposed by Duan
+et al. [12] to evaluate the query misspelling correction algo-
+rithms, which is deﬁned as the minimal number of keystrokes
+a user has to perform in order to submit the query. The min-
+imum is calculated among all possible interactions: the user
+can type the query’s next character or can select the query
+from the list of suggestions using arrow keys. Despite the
+fact that it was proposed to evaluate misspelling correction
+algorithms, MKS can also be used to evaluate query sug-
+gestions. By deﬁnition, a better system should have lower
+MKS, hence the correlation between the user satisfaction
+indicator and MKS should be negative.
+
+In Table 3, we report the correlation of the eﬀectiveness
+metrics with the query suggestion success rate across diﬀer-
+ent conﬁgurations. As we discussed in Section 7.2, this cor-
+relation implicitly includes comparison of diﬀerent queries.
+Since for queries of diﬀerent length the success rates diﬀer
+(i.e. it is easier for the user to type a short query entirely) we
+also report the correlation for queries of diﬀerent length. In
+
+640order to do this, the queries are split into four bins according
+to their length: less than 10 characters long; from 10 to 20
+characters; from 20 to 30, and a set of queries longer than
+30 characters. In addition, we report the correlation on the
+entire test dataset (length > 0).
+
+On analysing Table 3, we observe that all eight combi-
+nations of the proposed metrics (pSaved and eSaved) and
+considered examination probability functions (frr, flog, f i
+l ,
+and f d
+l ) perform better than the baseline metrics on each
+considered subset of queries (p ≤ 10−3). Comparing pSaved
+and eSaved we see that the pSaved metric is better corre-
+lated with the success rate. Moreover, this observation holds
+for both machine-learned functions f : pSaved(f i
+l ) outper-
+forms eSaved(f i
+l ) outperforms eSaved(f d
+l )
+for each query length bin (p ≤ 10−3). Considering the
+pSaved metric, we notice that both machine-learned func-
+tions, f i
+lead to a metric that is much better aligned
+with the user preferences than metrics induced by heuristic
+functions frr and flog in each query bin (p ≤ 5 × 10−3).
+
+l ) and pSaved(f d
+
+l and f d
+l
+
+The experimental setting reported in Table 3 highlights
+that among the studied metrics, pSaved is the most suitable
+metric to compare the eﬀectiveness of the query suggestion
+mechanism across queries and conﬁgurations.
+
+In Table 4, we report the correlation of the diﬀerence in
+eﬀectiveness metrics with the diﬀerence in query suggestion
+success rate. Similarly to Table 3, we split the queries into
+bins according to their length. Again, the proposed eﬀective-
+ness metrics outperform metrics used in the literature when
+the entire dataset considered. However, in contrast to the
+previous experiment, pSaved parameterised by f d
+is the sec-
+l
+ond best performing metric, less eﬀective than eSaved(f i
+l ).
+As a result, we can conclude that changes in ranking as
+measured by eSaved are better correlated with changes in
+user preferences than that of the other considered metrics.
+We conjecture that diﬀerent outcomes of the experiments
+are caused by the fact that improvements in the ranking
+of long queries have a higher impact on the overall system
+performance than improvements for shorter queries and the
+last experiment reﬂects this fact. This seems natural from
+the user’s point of view: since long queries are harder to
+submit, even small improvements in the ranking can be no-
+ticed. This observation is also supported by the fact that
+while pSaved(f i
+l ) dominates on short queries, its overall per-
+formance is worse than that of eSaved(f d
+
+l ).
+
+On the other hand, as we discussed in Section 6, eSaved
+has higher ability to diﬀerentiate changes in the ranking of
+longer queries than pSaved, thus outperforming it in the last
+experiment (4).
+
+To support this conjecture, we designed an experiment
+to answer the following question: which bin of queries has
+the highest impact on the correlation with the user prefer-
+ences, as reported in Table 4? In order to address this, we
+artiﬁcially improved the alignment of eSaved with the user
+preferences by replacing its value by a linear combination of
+eSaved with the users’ satisfaction rate, SS:
+
+(cid:48)
+eSaved
+
+(q, ) ← (1 − )eSaved(q) + SS(q)
+
+We denote the correlation between diﬀerences in the eSaved(cid:48)
+
+“metric” and the success rate SS by cor(∆SS, ∆eSaved(cid:48)
+).
+Further, we numerically calculate the partial derivative of
+the overall correlation value with respect to :
+
+
+
+∂ [cor(∆SS, ∆eSaved(cid:48)
+
+)]
+
+∂
+
+(7)
+
+(cid:12)(cid:12)(cid:12)(cid:12)=0
+
+Table 3: Correlation of the eﬀectiveness metrics
+with the query suggestion success rate. The correla-
+tion was calculated on several subsets of the dataset
+containing queries with diﬀerent length. Each ex-
+periment corresponds to a column. In each column
+(cid:52) denotes a group of values which statistically sig-
+niﬁcantly outperform other values and do not sta-
+tistically signiﬁcant diﬀer from each other.
+
+MRR-1
+MRR-3
+
+wMRR-1
+wMRR-3
+
+MKS
+
+eSaved(frr)
+eSaved(flog)
+eSaved(f i
+l )
+eSaved(f d
+l )
+pSaved(frr)
+pSaved(flog)
+pSaved(f i
+l )
+pSaved(f d
+l )
+
+> 0
+
+0.115
+0.243
+
+0.094
+0.154
+
+1 - 10
+
+11 - 20
+
+21 - 30 > 31
+
+0.116
+0.299
+
+0.052
+0.107
+
+0.139
+0.313
+
+0.103
+0.180
+
+0.129
+0.279
+
+0.104
+0.176
+
+0.122
+0.262
+
+0.099
+0.170
+
+-0.470
+
+-0.180
+
+-0.601
+
+-0.607
+
+-0.875
+
+0.816
+0.827
+0.817
+0.807
+
+0.522
+0.538
+0.527
+0.502
+
+0.731
+0.747
+0.731
+0.720
+
+0.871
+0.882
+0.870
+0.863
+
+0.902
+0.910
+0.902
+0.896
+
+0.849
+0.838
+0.857
+0.860(cid:52) 0.560(cid:52) 0.773(cid:52) 0.922(cid:52) 0.950(cid:52)
+
+0.547
+0.524
+0.561(cid:52)
+
+0.759
+0.747
+0.768
+
+0.918
+0.916
+0.921
+
+0.948
+0.947
+0.949
+
+Replacing eSaved by eSaved(cid:48)
+
+ sequentially for queries from
+diﬀerent bins, we estimate this derivative and report the re-
+sults in Table 5. Informally, these results show how sensitive
+is the overall correlation to improvements in the metric on a
+particular bin of queries. From the table, we observe that the
+correlation is most sensitive to improvements in the metric
+on queries which are between 21 and 30 characters long. At
+the same time, a small improvement of the metric on queries
+longer than 10 characters leads to almost two times higher
+improvement in alignment with the user satisfaction than
+the same change on the queries shorter than 10 characters.
+To summarise: on one hand, the eSaved metric is more
+discriminative than pSaved for longer queries by its design,
+and on the other hand the user behaviour (as well as align-
+ment of the metric with it) is very sensitive to changes in
+longer queries. As a result, changes in eSaved demonstrate
+a better alignment with changes in the user preferences than
+that of pSaved, as can be observed in Table 4.
+
+Overall, our experimental results suggest that the pro-
+posed metrics are better aligned with the user behaviour
+evidenced in the session log than other metrics considered,
+supporting the user model-based approach to build an ef-
+fectiveness metric as being promising. Additionally, the ex-
+periments demonstrate that the most fruitful direction of
+improving the proposed metrics is to increase their align-
+ment with user behaviour on long queries. Finally, pSaved
+is shown to be the most suitable metric to compare perfor-
+mances across queries, while changes in rankings measured
+by the eSaved metric correlate better with changes in the
+user preferences if the set of queries is ﬁxed.
+10. CONCLUSIONS AND FUTURE WORK
+In this paper, we presented a novel model of the user in-
+teractions with the query suggestion mechanisms. We de-
+scribed a machine learning approach to adapt the model
+parameters to the user behaviour observed in a session log.
+Using the described model, we introduced two user model-
+based evaluation metrics, pSaved and eSaved. The ﬁrst
+metric, pSaved is deﬁned as a probability of using a query
+
+641Table 4: Correlation of the diﬀerence in eﬀective-
+ness metrics with the diﬀerence in query suggestion
+success rate. The correlation was calculated on sev-
+eral subsets of the dataset containing queries with
+diﬀerent length. Each experiment corresponds to a
+column. In each column (cid:52) denotes a group of val-
+ues which statistically signiﬁcantly outperform other
+values and do not statistically signiﬁcant diﬀer from
+each other.
+
+MRR-1
+MRR-3
+
+wMRR-1
+wMRR-3
+
+MKS
+
+eSaved(frr)
+eSaved(flog)
+eSaved(f i
+l )
+eSaved(f d
+l )
+pSaved(frr)
+pSaved(flog)
+pSaved(f i
+l )
+pSaved(f d
+l )
+
+> 0
+
+0.557
+0.576
+
+0.463
+0.459
+
+1 - 10
+
+11 - 20
+
+21 - 30 > 31
+
+0.868
+0.931
+
+0.588
+0.549
+
+0.983
+0.989
+
+0.825
+0.613
+
+0.924
+0.930
+
+0.472
+0.166
+
+0.427
+0.486
+
+0.198
+0.229
+
+-0.484
+
+-0.713
+
+0.870
+0.875
+0.897 (cid:52)
+0.839
+
+0.981
+0.981
+0.982
+0.972
+
+0.813
+0.739
+0.839
+0.878
+
+0.965
+0.933
+0.978
+0.991 (cid:52)
+
+-0.805
+
+-0.409
+
+-0.950
+0.991(cid:52) 0.956(cid:52) 0.580(cid:52)
+0.991(cid:52) 0.957(cid:52) 0.586(cid:52)
+0.990(cid:52) 0.957(cid:52) 0.583(cid:52)
+0.990(cid:52) 0.957(cid:52) 0.580(cid:52)
+0.954
+0.506
+0.981
+0.987
+
+0.543
+0.072
+0.819
+0.906
+
+0.303
+0.202
+0.398
+0.470
+
+Table 5: Sensitivity of the correlation between the
+diﬀerence of the metric eSaved and the diﬀerence in
+the user preferences to small improvements in the
+metric.
+
+Query length
+∂cor(∆SS,∆eSaved(cid:48)
+)
+
+∂
+
+1 - 10 > 10
+
+11-20
+
+21-30 > 30
+
+0.61
+
+1.14
+
+0.04
+
+0.78
+
+0.34
+
+suggestion mechanism while submitting a query. eSaved
+equates to the normalised amount of keypresses a user can
+avoid due to the deployed query suggestion mechanism.
+
+Our empirical study using a session log encapsulating 6.1M
+sessions demonstrated that the proposed metrics show the
+best alignment with the user preferences exhibited in the
+session log. Among the proposed metrics, our experiments
+showed that changes in eSaved are the most correlated with
+changes in the user preferences, hence it can be recom-
+mended as a target metric in the ranking optimisation. On
+the other hand, pSaved shows the highest correlation with
+the user preferences across queries. Finally, we experimen-
+tally demonstrated that the correlation of the changes in
+both metrics with the changes in the user behaviour is most
+sensitive to improvements on long queries, hence making fu-
+ture work in this direction promising.
+
+Since this is the ﬁrst work to model the user interaction
+with a query suggestion mechanisms, a variety of extensions
+can be considered. First of all, the users diﬀer in typing
+speed, the device they use to select their query from the
+list of suggestions (e.g., they can use keyboard, mouse or
+touchpad with their desktop or use a mobile device). All
+these diﬀerences can lead to diﬀerent patterns in the user
+behaviour. Consequently, a possible extension of the pro-
+posed user model can incorporate these features. This idea
+is closely related to the work of Carterette et al. [4] which
+discussed incorporating the user variability into the system-
+based evaluation paradigm.
+
+Further study of the user behaviour can lead to improve-
+ments in the metric alignment with the user satisfaction
+
+indicator. However, there are other ways to improve the
+evaluation of query suggestions, e.g. one can extend a set
+of queries relevant to the user. As discussed by Zhu et al.
+[23] in the context of query recommendations, a possible ap-
+proach is to study the relevance of all queries submitted in
+the session.
+11. REFERENCES
+[1] R. Baeza-Yates, C. Hurtado, and M. Mendoza. Query
+recommendation using query logs in search engines. In
+Current Trends in Database Technology, volume 3268 of
+LNCS, pages 588–596. 2005.
+
+[2] Z. Bar-Yossef and N. Kraus. Context-sensitive query
+
+auto-completion. In WWW ’11.
+
+[3] P. N. Bennett, F. Radlinski, R. W. White, and E. Yilmaz.
+
+Inferring and using location metadata to personalize web
+search. In SIGIR ’11.
+
+[4] B. Carterette, E. Kanoulas, and E. Yilmaz. Incorporating
+variability in user behavior into systems based evaluation.
+In CIKM ’12.
+
+[5] O. Chapelle, S. Ji, C. Liao, E. Velipasaoglu, L. Lai, and
+
+S.-L. Wu. Intent-based diversiﬁcation of web search results:
+metrics and algorithms. Inf. Retr., 2011.
+
+[6] O. Chapelle, D. Metlzer, Y. Zhang, and P. Grinspan.
+
+Expected reciprocal rank for graded relevance. In CIKM
+’09.
+
+[7] O. Chapelle and Y. Zhang. A dynamic bayesian network
+
+click model for web search ranking. In WWW ’09.
+
+[8] C. L. Clarke, M. Kolla, G. V. Cormack, O. Vechtomova,
+A. Ashkan, S. B¨uttcher, and I. MacKinnon. Novelty and
+diversity in information retrieval evaluation. In SIGIR ’08.
+
+[9] C. Cleverdon. The Cranﬁeld tests on index language
+
+devices. Aslib Proceedings, 19(6):173–194, 1967.
+
+[10] K. Collins-Thompson, P. N. Bennett, R. W. White, S. de la
+
+Chica, and D. Sontag. Personalizing web search results by
+reading level. In CIKM ’11.
+
+[11] N. Craswell, O. Zoeter, M. Taylor, and B. Ramsey. An
+
+experimental comparison of click position-bias models. In
+WSDM ’08.
+
+[12] H. Duan and B.-J. P. Hsu. Online spelling correction for
+
+query completion. In WWW ’11.
+
+[13] G. E. Dupret and B. Piwowarski. A user browsing model to
+
+predict search engine click data from past observations. In
+SIGIR ’08.
+
+[14] K. J¨arvelin and J. Kek¨al¨ainen. Cumulated gain-based
+
+evaluation of ir techniques. ACM Trans. Inf. Syst.,
+20(4):422–446, 2002.
+
+[15] F. Radlinski and N. Craswell. Comparing the sensitivity of
+
+information retrieval metrics. In SIGIR ’10.
+
+[16] F. Radlinski, M. Kurup, and T. Joachims. How does
+
+clickthrough data reﬂect retrieval quality? In CIKM ’08.
+
+[17] M. Sanderson, M. L. Paramita, P. Clough, and
+
+E. Kanoulas. Do user preferences and evaluation measures
+line up? In SIGIR ’10.
+
+[18] M. Shokouhi and K. Radinsky. Time-sensitive query
+
+auto-completion. In SIGIR ’12.
+
+[19] A. Strizhevskaya, A. Baytin, I. Galinskaya, and
+
+P. Serdyukov. Actualization of query suggestions using
+query logs. In WWW ’12 Companion.
+
+[20] E. Voorhees. The philosophy of information retrieval
+
+evaluation. In Evaluation of Cross-Language Information
+Retrieval Systems, LNCS, pages 355–370. 2002.
+
+[21] E. Yilmaz, M. Shokouhi, N. Craswell, and S. Robertson.
+
+Expected browsing utility for web search evaluation. In
+CIKM ’10.
+
+[22] Y. Zhang, W. Chen, D. Wang, and Q. Yang. User-click
+
+modeling for understanding and predicting search-behavior.
+In KDD ’11.
+
+[23] X. Zhu, J. Guo, X. Cheng, and Y. Lan. More than
+
+relevance: high utility query recommendation by mining
+users’ search behaviors. In CIKM ’12.
+
+642

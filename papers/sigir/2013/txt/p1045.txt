@@ -1,0 +1,558 @@
+Informational Friend Recommendation in Social Media
+
+Shengxian Wan†, Yanyan Lan†, Jiafeng Guo†, Chaosheng Fan‡, Xueqi Cheng†
+
+yInstitute of Computing Technology, Chinese Academy of Sciences, Beijing, P.R.China
+wanshengxian@software.ict.ac.cn, {lanyanyan, guojiafeng}@ict.ac.cn
+
+zSchool of Mathematical Sciences, Peking University, Beijing, P.R.China
+
+fcs@pku.edu.cn, cxq@ict.ac.cn
+
+ABSTRACT
+It is well recognized that users rely on social media (e.g. Twit-
+ter or Digg) to fulﬁll two common needs (i.e.
+social need
+and informational need ) that is to keep in touch with their
+friends in the real world and to have access to information
+they are interested in. Traditional friend recommendation
+methods in social media mainly focus on a user’s social need,
+but seldom address their informational need (i.e. suggesting
+friends that can provide information one may be interested
+in but have not been able to obtain so far). In this paper, we
+propose to recommend friends according to the information-
+al utility, which stands for the degree to which a friend sat-
+isﬁes the target user’s unfulﬁlled informational need, called
+informational friend recommendation. In order to capture
+users’ informational need, we view a post in social medi-
+a as an item and utilize collaborative ﬁltering techniques
+to predict the rating for each post. The candidate friends
+are then ranked according to their informational utility for
+recommendation. In addition, we also show how to further
+consider diversity in such recommendations. Experiments
+on benchmark datasets demonstrate that our approach can
+signiﬁcantly outperform the traditional friend recommenda-
+tion methods under informational evaluation measures.
+
+Categories and Subject Descriptors
+H.3.3 [Information Search and Retrieval]: Information
+ﬁltering
+
+Keywords
+Friend Recommendation, Informational Utility, Diversity
+
+1.
+
+INTRODUCTION
+
+Recently, online social media (e.g. Twitter or Digg) has
+become one of the main platforms for users to publish, share
+and obtain information. For users of social media, social
+need and informational need are two well recognized basic
+needs. On one hand, users are active in social media since
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for proﬁt or commercial advantage and that copies bear
+this notice and the full citation on the ﬁrst page. Copyrights for components
+of this work owned by others than ACM must be honored. Abstracting with
+credit is permitted. To copy otherwise, or republish, to post on servers or to
+redistribute to lists, requires prior speciﬁc permission and/or a fee. Request
+permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+they can contact their friends in the real world very con-
+veniently; on the other hand, users can access information
+from others more comprehensively and rapidly.
+
+Friend recommendation is a key approach to help users
+discover new friends and interesting information. However,
+traditional friend recommendation methods in social media
+mainly focus on users’ social need (i.e. suggesting potential
+friends one may know), but seldom address their informa-
+tional need (i.e. suggesting friends that can provide infor-
+mation one may be interested in but have not been able to
+obtain so far). For example, some link prediction methods
+[8] use the network structure or users’ proﬁles as the ba-
+sis for recommendations, thus mainly considering the social
+need. Other methods such as [4] try to utilize user gener-
+ated content and recommend friends by user-user similarity.
+However, these methods may only suggest similar users, but
+not friends that can better satisfy users’ unfulﬁlled infor-
+mational need. For example, consider user A as the target
+user, if the similarity between user B and A is 99%, and
+between user C and A is 50%, it seems that the similarity
+based methods will recommend B rather than C to A. How-
+ever, the information from B is useless for A if most of them
+have already been obtained by A from other friends.
+
+In this paper, we propose to conduct friend recommenda-
+tion according to the informational utility, which is deﬁned
+as the degree to which a friend satisﬁes the target user’s
+unfulﬁlled informational need. We call this approach infor-
+mational friend recommendation. To capture a user’s in-
+formational need, we view typical posts in social media as
+items and utilize collaborative ﬁltering (CF) techniques to
+predict the rating for each post. The candidate friends are
+then ranked according to their informational utility for rec-
+ommendation. Furthermore, we discuss how to introduce
+diversity into the recommendation process to reduce infor-
+mation redundancy. Our experiments on Digg datasets show
+that our method can signiﬁcantly outperform the tradition-
+al state-of-the-art recommendation methods with respect to
+informational evaluation measures.
+
+To the best of our knowledge, this is the ﬁrst paper to
+explore the user’s unfulﬁlled informational need for friend
+recommendation, which is a novel approach for studies in
+social media.
+
+The rest of the paper is organized as follows. In Section 2,
+we will review some related works on friend recommendation
+in social media. Section 3 introduces the detailed formula-
+tion of our approach. Section 4 presents our experimental
+results and Section 5 concludes the paper.
+
+10452. RELATED WORK
+
+Friend recommendation in social networks can be viewed
+as a link prediction problem [9] in complex networks. Liben-
+Nowell et al. [8] ﬁrstly discussed link prediction in social net-
+works and compared lots of methods based on node proximi-
+ty. These methods mainly utilize the structural information
+of a given social network.
+
+Along with structural information, there are many oth-
+er types of information such as the user’s proﬁle and the
+user generated content of the social network. For exam-
+ple, Hannon et al. [4] proposed diﬀerent methods to proﬁle
+the users by user generated content and recommend friends
+based on proﬁle similarity. Recently, more and more meth-
+ods utilize structural information together with other types
+of information for recommendation. For example, Kim et
+al. [5] proposed a recommendation system for both friend
+and tweet recommendation. They proposed a novel prob-
+abilistic model based on PLSI and combined content and
+structural information in the model.
+
+Diﬀerent recommendation methods may be inclined to
+satisfy diﬀerent user needs. Chen et al. [1] compared d-
+iﬀerent friend recommendation algorithms in an enterprise
+social network and found that the algorithms based on in-
+formation about the social network can ﬁnd more known
+users while the algorithms checking for content similarity
+are more suited for discovering new friends. However, all
+of the methods mentioned above do not explicitly explore
+users’ unfulﬁlled informational need for recommendation.
+3. OUR APPROACH
+
+Diﬀering from traditional methods, we propose to recom-
+mend friends that can better satisfy users’ unfulﬁlled infor-
+mational need, which is called informational friend recom-
+mendation. For this purpose, we need to ﬁrst mine users’
+informational need. Here we consider users’ unfulﬁlled infor-
+mational need as the posts one may be interested in but are
+unable to obtained from his/her current friends so far, and
+mine such information with CF methods. We then introduce
+a quantity named informational utility, which stands for the
+degree to which a friend satisﬁes the target user’s unfulﬁlled
+informational need. Finally, we rank all the friend candi-
+dates by high informational utility for recommendation.
+3.1 Collaborative Filtering
+
+As mentioned above, the ﬁrst step for informational friend
+recommendation is to capture users’ unfulﬁlled information-
+al need. Here we view a post in social media as an item and
+consider the posts a user may be interested in but which are
+unable to be obtained so far as his/her unfulﬁlled informa-
+tional need. Therefore, we need to accurately predict the
+rating of each unobtained post for the target user. Natural-
+ly, the rating prediction problem can be handily solved by
+CF techniques.
+
+There are two popular approaches in CF: the neighbourhood-
+
+based methods and model-based methods. The basic idea
+of the neighbourhood-based methods is that similar users or
+items on observed ratings will act similarly on unobserved
+ratings. They identify neighbours of users or items, and con-
+duct rating predictions based on their neighbours’ ratings.
+The model-based methods try to uncover latent features that
+explain the observed ratings. They project users and items
+to the same latent factor space and the ratings are repre-
+sented as the inner product of the latent factor vectors.
+
+∩
+
+In this paper, we use several traditional state-of-the-art
+CF methods to conduct the rating prediction task: user-
+based KNN, SVD, and SVD++ [6].
+
+Recently, recommendation is more recognized as a ranking
+problem; therefore ranking techniques are widely used for
+recommendation.
+In this paper, we also use the ranking
+approach by introducing a pairwise ranking loss into SVD
+and SVD++; the corresponding methods are called Rank-
+SVD and Rank-SVD++ [2].
+
+With the predicted rating for each post, we sort the posts
+in descending order according to rating and select the top
+N as the post list that the target user is interested in but
+cannot obtain from their existing friends, denoted by list
+Lneed (u). We use Ineed (u) to denote the set of posts in
+Lneed (u). Note that in our work, we set N as 200.
+3.2 Recommend with Informational Utility
+
+We now introduce the quantity named informational util-
+ity, which stands for the degree to which a friend satisﬁes
+the target user’s unfulﬁlled informational need. Formally,
+the informational utility of user u
+given the target user u is
+deﬁned as:
+
+′
+
+∑
+
+IU u(u
+′
+
+) =
+
+i∈Ineed (u)
+
+Ipub (u′) weight(i)
+
+jIpub(u′)j + C
+
+;
+
+(1)
+
+′
+
+) is the set of posts from user u
+
+′
+where Ipub(u
+(by sharing,
+publishing or other activities), weight(i) is the weight func-
+tion of post i which decreases with the rank position in the
+ranking list Lneed (u), and C is a smoothing factor. Note
+that the numerator denotes the weighted information gain
+′
+the target user u can obtain from user u
+, while the denom-
+inator denotes the cost for user u when browsing the posts
+′
+from user u
+. The smoothing factor C is used to eliminate
+inactive users with few posts and to prevent over-ﬁtting.
+
+Based on Eq. (1), the top-k friend recommendation task
+can be accomplished by ranking the candidate users accord-
+ing to their informational utility for the target user.
+3.3 Diversity
+
+Beyond recommendation with respect to each user’s in-
+formational utility independently, diversity is another im-
+portant factor which is usually considered in information
+retrieval (IR) and recommender systems. In this context, di-
+versity means that the users in a recommendation list should
+cover as many diﬀerent aspects of informational need of the
+target user as possible.
+In IR, one popular strategy is to
+consider documents as composed of information nuggets and
+diversity is formalized as a max-COVER problem solved by
+a greedy algorithm [3]. Here we borrow this idea to achieve
+diversity in informational friend recommendation.
+
+While it is non-trivial to identify nuggets in documents,
+our approach can naturally use the posts as the nuggets. To
+achieve diversity, we introduce a weight decay factor (cid:11) into
+Eq. (1). Then in the greedy process, as long as a post is cov-
+ered by the previously selected friend, the weight of the post
+will be punished by (cid:11) to prevent information redundancy.
+The modiﬁed informational utility for diversity is deﬁned as:
+
+∑
+
+IU u(u
+′
+
+) =
+
+i∈Ineed (u)
+
+Ipub (u′) weight(i)(cid:11)ct(i)
+
+;
+
+(2)
+
+∩
+jIpub(u′)j + C
+
+where ct(i) is the time of post i being covered. Essentially,
+if (cid:11) is equal to 1, it turns back to the original informational
+utility.
+
+10464. EXPERIMENTS
+
+In this section, we conduct experiments on real social me-
+dia datasets and compare diﬀerent CF methods and friend
+recommendation methods.
+4.1 Experimental Settings
+
+In this work, we use data from Digg 1 collected by Lerman
+et al. [7] in June 2009 through Digg API for experiments.
+Digg is a social news aggregator where social need and in-
+formational need are both important for the users. Besides,
+users of Digg can access posts from both their friends and
+other sources such as the front page. As a result, we can
+construct the ground-truth of any given user’s information-
+al need by the posts digged from the front page but not
+from their friends. The data contains the information of so-
+cial network and user digging behaviours. Overall, there are
+3,553 stories, 3,018,197 votes, 139,409 users and 1,731,658
+asymmetric links between these users.
+
+We sort the story posts by the time they were published
+and separate them into training, validation and testing set,
+with sizes 2553, 500, 500, respectively. For the training set,
+we separate it into two subsets for each user, one is the set
+of posts from other friends and the other is the set of posts
+from other sources, denoted as train1 and train2 respective-
+ly. Train1 is used for the training of CF and train2 is used
+as the test data to evaluate the performance of CF method-
+s. After that, the ranking strategies are conducted over the
+whole training set, and the validation set is used for tuning
+the smoothing factor C. Finally, measurements on test data
+are used to evaluate the performance of the recommendation
+methods.
+4.2 Experiments on Collaborative Filtering
+
+Firstly, we compare the results of diﬀerent CF methods
+on our dataset, including KNN, SVD, SVD++, rank-SVD
+and rank-SVD++. In the experiments, we deﬁne the pos-
+itive examples (i.e. a user diggs a post) as rating 1. We
+can see that this is a one-class CF problem, so we sample
+equal amount of negative samples deﬁned as rating 0 in each
+round of iteration in the optimization process of these meth-
+ods. For SVD++, we use all the positive examples as user
+feedback since we have no implicit user feedback data. In
+this section, we use precision@n as the evaluation measure,
+since the output of the ﬁrst step is a ranking list.
+
+From the experimental results in Fig.1, we can see that:
+(1) All the model-based CF methods (SVD, SVD++, Rank-
+SVD, Rank-SVD++) work better than neighbourhood-based
+CF methods (KNN); (2) The methods based on ranking loss
+(Rank-SVD, Rank-SVD++) are better than the correspond-
+ing methods based on regression loss (SVD, SVD++). These
+results are in accordance with previous studies.
+
+In the following friend recommendation experiments, we
+choose Rank-SVD as the CF method due to its good perfor-
+mance and simpler implementation over Rank-SVD++.
+4.3 Experiments on Friend Recommendation
+Now we compare our method (denoted as Inf-Rec) with
+
+some state-of-the-art friend recommendation methods.
+
+For baselines, we use three commonly used methods which
+only use the network structure, including: (1)friend-of-friend
+
+Figure 1: Results of diﬀerent CF methods
+
+including:
+
+(FdFd): this method simply recommends the friends of friend-
+s to the target user; (2)follower-of-friend (FlFd): this method
+recommends users who have similar friend sets as the target
+user; (3)friend-of-follower-of-friend (FdFlFd): this method
+goes further than FlFd by recommending the friends of FlFd
+to the target user.
+In addition, we also propose two oth-
+er baselines which focus on users’ informational need for
+recommendation2,
+(1)sharing similarity(Share-
+Sim): this method ranks users by Jaccard similarity of dig-
+ging behaviours with the target user; (2)sharing eﬃcien-
+cy(Share-Eﬃ): this method ranks users by the ratio of com-
+mon posts with the target user to the total posts they digged.
+In this paper, we mainly focus on satisfying users’ infor-
+mational need in friend recommendation. Therefore, we use
+an informational evaluation measure for comparison, which
+is deﬁned as the eﬃciency of the potential information gain
+that one can obtain from the recommendation:
+Ipub(ui)j
+
+jIneed (u)
+
+;
+
+(3)
+
+EIG@k =
+
+k∑
+
+i=1
+
+1
+k
+
+∩
+jIpub(ui)j
+
+where k stands for the number of friends recommended.
+
+Figure 2: Evaluation results of recommendation lists
+
+From the experimental results in Fig.2, we can see that:
+(1) Our method can signiﬁcantly outperform the baselines.
+For example, the relative improvement of Inf-Rec over the
+
+1http://digg.com/. Digg’s home page has changed several
+times in recent years and now it is very diﬀerent from the
+old version when the dataset was crawled.
+
+2Since in the Digg datasets, there is no content information,
+we could not implement the traditional methods on content
+information.
+
+0.10.110.120.130.140.150.160.170.180.19p@5p@10p@20p@50PopularityKNNSVDSVD++Rank-SVDRank-SVD++00.010.020.030.040.050.060.07EIG@1EIG@5EIG@10FdFdFdFlFdFlFdShare-EffiShare-SimInf-Rec1047worst baseline is 497%, and the relative improvement of Inf-
+Rec over the best baseline is 56:4% on EIG@5; (2) The
+methods based on network structure (FdFd, FlFd, FdFlFd)
+perform the worst amongst all the methods. For example,
+the average EIG@1 is 0.0124, which is much smaller than
+that of the two designed baselines based on user digging be-
+haviours (0.0369). Therefore, we can conclude that both
+methods based on network structure and user digging be-
+haviours cannot properly address the user’s unfulﬁlled in-
+formational need. Our method fully explores a user’s infor-
+mational need by the deﬁned informational utility, and thus
+achieves better performance.
+
+Figure 3: Results with diﬀerent smoothing factor
+
+4.4 Discussions
+
+In this section, we discuss the eﬀect of the smoothing fac-
+
+tor C and diversity mentioned in Section 3.3.
+
+(1) Fig.3 shows the varying curve of EIG with C on the
+validation set. We can see that the algorithm will be severe-
+ly over-ﬁtting without the smoothing factor, and the result
+will stay stable when C becomes large enough. In our ex-
+periments, we set C = 30.
+
+(2) Fig.4 shows the SET COST =SET GAIN curve on
+the test set to compare the diversity of recommendation
+lists, where SET COST is the sum of users’ costs in the
+recommendation list and SET GAIN is deﬁned as
+
+(
+
+k∪
+
+(cid:12)(cid:12)(cid:12)(cid:12)(cid:12)
+
+)∩
+
+(cid:12)(cid:12)(cid:12)(cid:12)(cid:12) ;
+
+SET GAIN @k =
+
+Ipub(ui)
+
+Ineed (u)
+
+i=1
+
+(4)
+
+where k stands for the number of friends recommended. A
+recommendation with higher gain and lower cost at set level
+is better in the sense of diversity. We can see that by further
+introducing the decay factor (cid:11) = 0:3 in our method, it can
+achieve better performance in terms of diversity.
+
+5. CONCLUSIONS AND FUTURE WORK
+In this paper, we proposed to conduct friend recommenda-
+tion according to users’ informational need, which is called
+informational friend recommendation. Firstly, we utilized
+collaborative ﬁltering techniques to capture users’ unfulﬁlled
+informational need. Secondly, two ranking strategies were
+conducted according to informational utility to obtain the
+recommendation. Our experimental results on Digg datasets
+show that our method signiﬁcantly outperforms the current
+state-of-the-art friend recommendation methods.
+
+Figure 4: Diversity result of recommendation lists, where
+the points on the curve corresponding to diﬀerent ks.
+
+As for future work, we plan to investigate how to conduc-
+t informational friend recommendation with a uniﬁed ap-
+proach other than the two-step method in this paper.
+
+6. ACKNOWLEDGEMENTS
+
+This research work was funded by the National Natural
+Science Foundation of China under Grants No. 61232010,
+No. 61203298, No. 61003166, 863 Program of China un-
+der Grants No. 2012AA011003, and National Key Tech-
+nology R&D Program under Grants No. 2011BAH11B02,
+No. 2012BAH39B02, No. 2012BAH39B04.
+
+7. REFERENCES
+[1] J. Chen, W. Geyer, C. Dugan, M. Muller, and I. Guy.
+
+Make new friends, but keep the old: recommending
+people on social networking sites. CHI ’09, pages
+201–210, 2009.
+
+[2] K. Chen, T. Chen, G. Zheng, O. Jin, E. Yao, and
+
+Y. Yu. Collaborative personalized tweet
+recommendation. SIGIR ’12, pages 661–670, 2012.
+[3] C. Clarke, M. Kolla, G. Cormack, O. Vechtomova,
+
+A. Ashkan, S. B¨uttcher, and I. MacKinnon. Novelty
+and diversity in information retrieval evaluation. SIGIR
+’08, pages 659–666, 2008.
+
+[4] J. Hannon, M. Bennett, and B. Smyth. Recommending
+
+twitter users to follow using content and collaborative
+ﬁltering approaches. In ACM Recsys, pages 199–206,
+2010.
+
+[5] Y. Kim and K. Shim. TWITOBI: A Recommendation
+
+System for Twitter Using Probabilistic Modeling.
+ICDM ’11, pages 340–349, 2011.
+
+[6] Y. Koren. Factorization meets the neighborhood: a
+multifaceted collaborative ﬁltering model. KDD ’08,
+pages 426–434, 2008.
+
+[7] K. Lerman and R. Ghosh. Information Contagion: an
+
+Empirical Study of Spread of News on Digg and
+Twitter Social Networks. In ICWSM, 2010.
+
+[8] D. Liben-Nowell and J. Kleinberg. The link prediction
+problem for social networks. CIKM ’03, pages 556–559,
+2003.
+
+[9] L L¨u and T Zhou. Link prediction in complex networks:
+
+A survey. Physica A: Statistical Mechanics and its
+Applications, (6):1150–1170, 2011.
+
+00.010.020.030.040.050.060.07020406080100120EIG@1 C 00.511.522.533.544.5050100150200SET_GAIN SET_COST no diversityα=0.3 1048

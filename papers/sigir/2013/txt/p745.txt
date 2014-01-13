@@ -1,0 +1,702 @@
+Document Features Predicting Assessor Disagreement
+
+Praveen Chandar
+
+William Webber
+
+Ben Carterette
+
+Department of Computer &
+
+College of Information Studies
+
+Department of Computer &
+
+Information Sciences
+University of Delaware
+
+Delaware, USA
+pcr@cis.udel.edu
+
+University of Maryland
+
+Maryland, USA
+wew@umd.edu
+
+Information Sciences
+University of Delaware
+
+Delaware, USA
+
+carteret@cis.udel.edu
+
+ABSTRACT
+
+The notion of relevance differs between assessors, thus giving rise
+to assessor disagreement. Although assessor disagreement has been
+frequently observed, the factors leading to disagreement are still
+an open problem. In this paper we study the relationship between
+assessor disagreement and various topic independent factors such
+as readability and cohesiveness. We build a logistic model using
+reading level and other simple document features to predict as-
+sessor disagreement and rank documents by decreasing probabil-
+ity of disagreement. We compare the predictive power of these
+document-level features with that of a meta-search feature that ag-
+gregates a document’s ranking across multiple retrieval runs. Our
+features are shown to be on a par with the meta-search feature,
+without requiring a large and diverse set of retrieval runs to calcu-
+late. Surprisingly, however, we ﬁnd that the reading level features
+are negatively correlated with disagreement, suggesting that they
+are detecting some other aspect of document content.
+
+Categories and Subject Descriptors
+
+H.3.4 [Information Storage and Retrieval]: Systems and soft-
+ware—performance evaluation.
+
+General Terms
+
+Measurement, performance, experimentation
+
+Keywords
+
+Retrieval experiment, evaluation
+
+1.
+
+INTRODUCTION
+
+Human assessors are used in information retrieval evaluation to
+judge the relevance of a document for a given topic. Assessors
+frequently disagree on the relevance of a document to a topic, how-
+ever. A study by [7] found that the probability that a second asses-
+sor would agree with a ﬁrst assessor’s judgment that a document
+was relevant was only two in three. A survey of such studies done
+by [2] found similar results as well. While [7] found that assessor
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for proﬁt or commercial advantage and that copies bear this notice and the full citation
+on the ﬁrst page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior speciﬁc permission
+and/or a fee. Request permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright is held by the owner/author(s). Publication rights licensed to ACM.
+ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+disagreement had limited effect on the comparative evaluation of
+systems, it does have a major impact upon the evaluation of their
+absolute effectiveness. Moreover, a simulation study by [4] sug-
+gests that the effect on comparative evaluation depends upon the
+nature of disagreement, and that an overly liberal (or careless) as-
+sessor introduces considerable noise even to the comparison of re-
+trieval systems.
+
+While assessor disagreement has been frequently observed, and
+its effect on retrieval evaluation somewhat studied, less work has
+been done on the factors that lead to assessor disagreement. [9] ob-
+serves that there is great variability in disagreement between differ-
+ent assessor pairs and on different topics. Regarding assessor-level
+effects, [8] ﬁnd that assessor training has little effect on reliability
+(legally trained assessors no more than untrained assessors on e-
+discovery tasks). Regarding topic-level effects, [11] ﬁnd that more
+detailed assessor instructions do not seem to increase disagreement.
+In addition to assessor-level and topic-level effects on assessor
+disagreement, there may be document-level effects: some docu-
+ments may be more likely to provoke assessor disagreement than
+others. [10] have begun work in this direction, using metarank in-
+formation across multiple runs to predict disagreement. If one as-
+sessor ﬁnds a document relevant, but it is generally lowly ranked by
+retrieval systems, then a second assessor is likely to disagree with
+the original assessor, and conversely with originally-irrelevant but
+highly-ranked documents.
+
+In the current paper, we investigate the relation between asses-
+sor disagreement and various topic-independent document features.
+One set of such features are various metrics of the reading level or
+reading difﬁculty of a document. Our hypothesis is that documents
+that are more difﬁcult to read will provoke higher levels of asses-
+sor disagreement. We also consider document length (hypothesiz-
+ing that longer documents will provoke more disagreement) and
+document coherence (hypothesizing that less coherent documents
+will provoke more disagreement). Finally, we extend the metarank
+method of [10] by considering not only average rank across differ-
+ent retrieval systems, but also the variability in the ranking—using
+disagreement between retrieval systems as a predictor of disagree-
+ment between human assessors.
+
+If reliable document-level predictors of assessor disagreement
+can be found, then they can be used to efﬁciently direct multiple
+assessments towards those documents most likely to provoke as-
+sessor disagreement. We consider this as a ranking problem, in
+which documents must be ranked by decreasing probability of as-
+sessor disagreement, examining the case in which this ranking must
+be made without any initial relevance assessment having been per-
+formed. Our experimental results indicate that document-level fea-
+tures give a signiﬁcant improvement over random choice in pre-
+dicting assessor disagreement. Moreover, where initial relevance
+
+745assessments are not available, document-level features predict as-
+sessor disagreement as strongly as meta-rank features, without re-
+quiring a large and diverse set of retrieval runs to calculate.
+
+One surprise of the study is that while reading level features are
+predictive of assessor disagreement, the correlation is the opposite
+of that posited in our hypothesis: documents scored as easier to
+read are more, not less, likely to provoke assessor disagreement
+than those scored as difﬁcult to read. This suggests that reading
+level features are themselves correlated with some other aspect of
+document construction or content, which if more directly identiﬁed
+could lead to even stronger predictors of assessor disagreement; a
+question which is left to future work.
+
+The remainder of the paper is structured as follows. A descrip-
+tion of our logistic regression model along with all the document-
+level features is given in Section 2. Section 3 describes our ex-
+periments along with the dataset used in this work, and a detailed
+analysis of our results is given in Section 4. Section 5 summarizes
+our ﬁndings and sketches future work.
+
+2. ASSESSOR DISAGREEMENT
+
+Our approach to the problem of predicting assessor disagreement
+consists of two main components: identifying features, and devel-
+oping a modeling technique.
+
+2.1 Logistic regression
+
+We predict the probability that a document will attract diver-
+gent binary relevance assessments from two or more assessors (D),
+based upon various document level features s = hsii, as p(D =
+1|s). As we are predicting a probability, it is natural to apply a
+logistic regression to this problem:
+
+p(D = 1|s) =
+
+eβ0+Pi βisi
+
+1 + eβ0+Pi βi si
+
+(1)
+
+where si is the score for feature i, and the probability p is the pre-
+dicted value. The ﬁtted value β0 in Equation 1 is the intercept,
+which gives the log-odds of disagreement when the score is 0, while
+βi is the score coefﬁcient for feature i, which gives the change or
+“slope” in log odds of disagreement for every one point increase in
+the given feature scores. The slope gives the strength of relation-
+ship between feature scores and probability of disagreement, while
+intercept the shifts the regression curve up or down the score axis.
+A model can be built for each topic individually, or a univer-
+sal model can be built using all queries in our dataset. The degree
+to which a universal model is a good approximation for per-topic
+models depends upon the strength of per-topic factors in inﬂuenc-
+ing disagreement. The closer the universal model is to the per-
+topic models, the more likely it is that a generalized model can be
+built, that is able to predict assessor disagreement on new collec-
+tions based only the feature scores.
+
+2.2 Document Features
+
+In this section, we discuss in detail the various predictors that
+we use in Equation 1 to estimate assessor disagreement. The lo-
+gistic model described in Section 2.1 relies heavily on the feature
+scores and identifying good predictors of disagreement is critical.
+We use a combination of simple document characteristic features
+and reading level features to estimate disagreement.
+
+2.2.1 Simple Document Features
+
+The simple document quality features are described below:
+
+- docLength Total number of terms in a document is a simple
+feature that estimates the amount of information available in
+the document.
+
+- aveWordLength Average word length (number of characters)
+
+is a very simple estimate of readability of a document.
+
+- Entropy An estimate of document cohesiveness can be ob-
+tained using the entropy of the document [3]. Document en-
+tropy is computed over the words in the document as follows:
+
+E (D) = − Xw∈D
+
+P (w)log(P (w))
+
+(2)
+
+where P (w) can be estimated by the ratio of frequency of the
+word to the total number of words in the document. Lower
+entropy reﬂects a document that is focused on a single topic,
+while higher entropy indicates a more diffuse document.
+
+2.2.2 Reading Level Features
+
+We employ a number of standard metrics of reading level, based
+upon simple textual statistics. More complicated statistical and lan-
+guage model approaches are left for future work [5].
+
+- FleschIndex and Kincaid are designed to capture the com-
+prehension level of a passage. The two measures use word
+and sentence length with different weighting factors. FleschIn-
+dex is a test of reading ease with higher scores indicating text
+that is easier to read. Kincaid is a grade score that is nega-
+tively correlated to FleschIndex. A generic formula for both
+metrics is given below:
+
+a ·
+
+words
+
+sentences
+
++ b ·
+
+syllables
+
+words
+
++ c
+
+(3)
+
+where the values of a,b, and c are as follows: FleschIndex
+(a = −1.01, b = −84.6, c = 206.83) and Kincaid (a =
+0.39, b = 11.8, c = −15.59).
+
+- FogIndex relies on average sentence length and the percent-
+age of complex words for each passage of 100 words. Words
+with three or more syllables are identiﬁed as complex words.
+
+0.4"„ words
+
+sentences« + 100
+
+complexWords
+
+words
+
+#
+
+(4)
+
+- SMOG (Simple Measure of Gobbledygook) was designed as
+an easier and more accurate substitute to FogIndex, and is
+more prevalent in the medical domain. It relies on two fac-
+tors: the number of polysyllables (words with 3 or more syl-
+lables) and the number of sentences.
+
+1.043rnumOfPolysyllables ×
+
+30
+
+sentences
+
++ 3.129 (5)
+
+- Lix is a simple measure of readability computed by adding
+average sentence length and number of long words. Words
+with 6 or more letters are considered as long words.
+
+words
+
+sentences
+
++
+
+(longwords × 100)
+
+words
+
+(6)
+
+- ARI (Automated Readability Index) is computed by com-
+bining the ratio of the number of characters per word and
+number of words per sentence. ARI relies on the number of
+characters per word instead of syllables per word.
+
+4.71
+
+characters
+
+words
+
++ 0.5
+
+words
+
+sentences
+
+− 21.43
+
+(7)
+
+746- Coleman-Liau is very similar to the ARI, computed by a lin-
+ear combination of average number of letters per 100 words
+and average number of sentences per 100 words.
+
+48 topics is split into 5 folds; one fold is held out for testing,
+and the other four used to develop a universal model. This
+avoids having a topic in both training and testing sets.
+
+0.059L − 0.296S − 15.8
+
+(8)
+
+where, L is the average number of letters per 100 words and
+S is the average number of sentences per 100 words.
+
+2.2.3 Metarank Feature
+
+[10] propose using the metarank of a document across multiple
+retrieval runs as a predictor that a second assessor would disagree
+with an original assessor, given the original assessor’s judgment.
+The metarank method used was the meta-AP score of [1], which
+is a document’s implicit average precision (AP) weight in a rank-
+ing. [10] used average meta-AP score as their predictor. We add
+to this, maximum meta-AP score and standard deviation of meta-
+AP scores, the last of which is a measure of the disagreement be-
+tween retrieval systems over what rank a document should be re-
+turned at. Note also that [10] assume that the assessment of the
+original assessor was available, and build separate models for the
+originally-relevant and originally-irrelevant conditions; in this pa-
+per, however, we assume no assessments have been made, and build
+a single model to predict assessor disagreement.
+
+3. EXPERIMENT DESIGN
+
+3.1 Data
+
+We use the multiply-assessed TREC 4 AdHoc dataset described
+by [7]. The dataset consists of 48 topics, with up to 200 relevant
+and 200 irrelevant pooled documents selected for multiple assess-
+ment by two alternative assessors, additional to the assessment of
+the topic author (who we refer to as the original assessor). We re-
+strict ourselves only to documents from the Associated Press sub-
+collection to avoid biases introduced by the non-random method
+of selecting documents for multiple assessment, and follow [7] in
+dropping Topics 201 and 214, as the original assessor found no
+documents relevant for the former, and the ﬁrst alternative assessor
+found none relevant for the latter. We regard the assessment of a
+document as “disagreed” if the three relevance assessors do not all
+give the same assessment; this is the condition that our model will
+attempt to predict.
+
+3.2 Implementation
+
+We build per-topic models (Section 2.1) for performing feature
+analysis (Section 4.1), but a universal model for ranking by pre-
+dicted disagreement (Section 4.2), since we assume that it is re-
+dundant to perform multiple assessments just to train up per-topic
+models in practice; learning-to-rank methods that adapt models for
+topics is left to future work. The model construction and evaluation
+method used in the disagreement ranking stage is described below.
+
+- Normalization - Prior research has found the range of read-
+ing level scores to vary greatly with the topic [6]. It is a rea-
+sonable approach to normalize feature scores, making scores
+and models more stable across topics. We use the following
+L1 normalization to normalize the scores of each feature for
+each topic.
+
+norm(x) = x/sum(x)
+
+(9)
+
+- Cross-Validation - We test the generalizability of the predic-
+tive ranking method using cross-validation. The dataset of
+
+- Training - Each query in the training data is used to build a
+logistic model as described in Section 2.1. The maximum
+likelihood approach to ﬁt the data provides us with values of
+intercept β0 and coefﬁcients βi in Equation 1. Finally, the
+intercept and coefﬁcients of our training model are obtained
+by computing the mean intercept and coefﬁcients values over
+all training queries.
+
+- Testing - The feature scores are computed for each document
+in the unseen test query. The probability of disagreement is
+obtained using Equation 1 by substituting si from the com-
+puted feature scores, and intercept β0 and coefﬁcients β1
+from the trained model. Sorting documents by decreasing
+order of probability of disagreement gives the ﬁnal ranked
+list.
+
+We evaluate the quality of the rankings of documents by proba-
+bility of disagreement using 11 point precision–recall curves, mean
+average precision, and precision at various cutoffs, with the ground
+truth being documents that the three assessors disagree upon the
+relevance of.
+
+4. RESULTS AND ANALYSIS
+
+We ﬁrst analyze the relationship between individual features and
+assessor disagreement by performing per-topic regressions (Sec-
+tion 4.1), then investigate the usefulness of these features as pre-
+dictors of disagreement by building and testing universal (cross-
+validated) models (Section 4.2).
+
+4.1 Feature Analysis
+
+We test our hypotheses that: (1) documents with higher compre-
+hension difﬁculty, (2) longer documents, and (3) documents that
+are less focused on a topic (less cohesive), are more likely to be
+disagreed upon. For each feature, we build a logistic regression
+model on each topic with that feature as the single predictor, and
+observe the coefﬁcients that the feature achieves across the 48 top-
+ics (the β values in Equation 1). We calculate the average coefﬁ-
+cient, and perform a two-sided, one sample t-test to test whether
+this coefﬁcient differs signiﬁcantly from zero across the 48 topics.
+Table 4.1 reports our results. The metarank features are all highly
+signiﬁcant. Entropy is also a signiﬁcant positive predictor. In so far
+as entropy measures topic diffuseness, this conﬁrms our hypothe-
+sis that more diffuse documents provoke higher levels of disagree-
+ment. Many of the reading level predictors also prove signiﬁcantly
+correlated with disagreement. Surprisingly, however, the correla-
+tion is in the opposite direction from the hypothesis. Documents
+that get lower reading level scores, and therefore are marked as
+being easier to reading, in fact provoke higher levels of assessor
+disagreement.
+(Recall that FleschIndex is the only reading level
+feature where higher scores mean easier comprehension.)
+
+4.2 Modeling Disagreement
+
+Next, we investigate how useful our method is at predicting as-
+sessor disagreement, using a universal (cross-validated) model to
+rank the documents of each topic by decreasing probability of as-
+sessor disagreement. Table 4.2 summarizes performances for aver-
+age precision and precision at various cutoffs. We add as a baseline
+the expected precision achieved by a random sorting of the doc-
+uments, which is just the macroaveraged proportion of disagreed
+documents per topic. A universal model that combines all our
+
+747Predictor
+
+p-value
+
+βi
+
+FleschIndex
+ColemanLiau
+SMOGGrading
+Lix
+Kincaid
+ARI
+FogIndex
+
+docLength
+aveWordLength
+Entropy
+
+metaAPSum
+metaAPStDev
+metaAPMax
+
+0.108
+0.163
+0.077
+0.012
+0.022
+0.006
+0.018
+
+0.052
+0.225
+< 0.001
+
+< 0.001
+< 0.001
+< 0.001
+
+139.4
+-164.4
+-166.4
+-241.7
+-133.3
+-156.0
+-159.2
+
+51.2
+-374.7
+832.1
+
+159.7
+206.8
+321.2
+
+Table 1: Results of signiﬁcance test using two-sided one sample
+t-test with p-values and mean co-efﬁcient scores across all 48
+topics.
+
+Predictor
+
+P@5
+
+P@10
+
+P@20 MAP
+
+random
+metaAP
+docLength
+Entropy
+aveWordLength
+ReadingLevel
+
+0.216
+0.317*
+0.229
+0.258
+0.200
+0.246
+
+0.216
+0.350*
+0.229
+0.254
+0.190
+0.252
+
+0.216
+0.357*
+0.235
+0.241
+0.215
+0.229
+
+0.216
+0.372*
+0.255*
+0.261*
+0.240*
+0.239*
+
+All Combined
+
+0.321*
+
+0.329*
+
+0.341*
+
+0.362*
+
+Table 2: Performance Comparison at various ranks with signif-
+icant improvement over expected random scores indicated by *
+(paired t-test). The results are based on 5-fold cross validation
+across 48 topics.
+
+features (denoted by “All Combined”) and a model that uses the
+metarank features signiﬁcantly improves over random ordering un-
+der all measures. All the other features give a signiﬁcant improve-
+ment over random order for MAP only, suggesting that top-of-
+ranking performance is mediocre. Entropy does best, as in Ta-
+ble 4.1, whereas the combined reading levels, despite being signif-
+icant correlated with disagreement give very little beneﬁt in terms
+of predicting disagreement under a universal model.
+
+5. CONCLUSION
+
+We started this paper with three hypotheses, namely that the doc-
+uments that assessors are more likely to disagree on are: (1) docu-
+ments with higher comprehension difﬁculty; (2) longer documents;
+and (3) documents that are less cohesive. At least in so far as these
+three conditions are captured by the measures we have used, our
+results have been mixed. The correlation between entropy and dis-
+agreement conﬁrms the third hypothesis, and provides a weakly
+useful practical predictor of disagreement. The relationship be-
+tween document length and disagreement (our second hypothesis),
+if it exists, is too weak for our experiments to detect as signiﬁcant.
+Most surprisingly of all, our ﬁrst hypothesis, that difﬁcult docu-
+ments would provoke more disagreement, has not only failed to be
+
+conﬁrmed, but in fact the reverse has been observed: it is easier
+documents that provoke the most disagreement.
+
+As it seems intuitively hard to believe that it is in fact easily-
+comprehended documents that assessors disagree the most about,
+a more likely interpretation of our results is that the reading level
+measures are picking up some other aspect of document content,
+syntax, or representation that tends to provoke disagreement in as-
+sessors. An informal examination of disagreed-upon documents
+that attracted easy reading level scores, for instance, suggests that
+a disproportionate number of them are transcripts of spoken text—
+presidential debates, speeches, interviews, and the like. These tend
+to have short sentences, but diffuse topics, and may be difﬁcult to
+read quickly. Further work is to determine whether there are other
+text metrics that can more directly and accurately target the aspects
+of a document that predict assessor disagreement.
+
+Acknowledgments: This material is based in part upon work supported by
+the National Science Foundation under Grant No. 1065250. Any opinions,
+ﬁndings, and conclusions or recommendations expressed in this material are
+those of the authors and do not necessarily reﬂect the views of the National
+Science Foundation.
+
+6. REFERENCES
+[1] J. A. Aslam, V. Pavlu, and E. Yilmaz. Measure-based metasearch. In
+Proceedings of the 28th annual international ACM SIGIR conference
+on Research and development in information retrieval - SIGIR ’05,
+page 571, New York, New York, USA, 2005. ACM Press.
+
+[2] P. Bailey, P. Thomas, N. Craswell, A. P. D. Vries, I. Soboroff, and
+
+E. Yilmaz. Relevance assessment: are judges exchangeable and does
+it matter. In Proceedings of SIGIR, SIGIR ’08, pages 667–674. ACM,
+2008.
+
+[3] M. Bendersky, W. Croft, and Y. Diao. Quality-biased ranking of web
+
+documents. In Proceedings of the fourth ACM international
+conference on Web search and data mining, pages 95–104. ACM,
+2011.
+
+[4] B. Carterette and I. Soboroff. The effect of assessor error on ir
+
+system evaluation. In Proceeding of the 33rd international ACM
+SIGIR conference on Research and development in information
+retrieval, pages 539–546. ACM, 2010.
+
+[5] K. Collins-Thompson and J. Callan. Predicting reading difﬁculty
+
+with statistical language models. J. Am. Soc. Inf. Sci. Technol.,
+56(13):1448–1462, Nov. 2005.
+
+[6] J. Y. Kim, K. Collins-Thompson, P. N. Bennett, and S. T. Dumais.
+Characterizing web content, user interests, and search behavior by
+reading level and topic. In Proceedings of the ﬁfth ACM international
+conference on Web search and data mining, WSDM ’12, pages
+213–222, New York, NY, USA, 2012. ACM.
+
+[7] E. Voorhees. Variations in relevance judgments and the measurement
+
+of retrieval effectiveness. Information Processing & Management,
+36(5):697–716, Sept. 2000.
+
+[8] J. Wang and D. Soergel. A user study of relevance judgments for
+e-discovery. Proceedings of the American Society for Information
+Science and Technology, 47:1–10, 2010.
+
+[9] W. Webber. Re-examining the effectiveness of manual review. In
+
+Proc. SIGIR Information Retrieval for E-Discovery Workshop, pages
+2:1–8, Beijing, China, July 2011.
+
+[10] W. Webber, P. Chandar, and B. Carterette. Alternative assessor
+
+disagreement and retrieval depth. In Proceeding 21st International
+Conference on Information and Knowledge Management - CIKM’12,
+pages 125–134, 2012.
+
+[11] W. Webber, B. Toth, and M. Desamito. Effect of written instructions
+
+on assessor agreement. In Proceedings of the 35th international ACM
+SIGIR conference on Research and development in information
+retrieval, SIGIR ’12, pages 1053–1054, New York, NY, USA, 2012.
+ACM.
+
+748

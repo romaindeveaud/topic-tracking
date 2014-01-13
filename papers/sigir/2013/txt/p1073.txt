@@ -1,0 +1,544 @@
+#trapped! Social Media Search System Requirements for
+
+Emergency Management Professionals
+
+Stefan Raue, Leif Azzopardi and Chris W. Johnson
+
+School of Computing Science
+
+University of Glasgow
+
+{stefan.raue, leif.azzopardi, christopher.johnson}@glasgow.ac.uk
+
+Scotland, UK
+
+ABSTRACT
+Social media provides a new and potentially rich source of
+information for emergency management services. However,
+extracting the relevant information from such streams poses
+a number of diﬃcult challenges. In this short paper, we sur-
+vey emergency management professionals to ascertain how
+social media is used when responding to incidents, the search
+strategies that they undertake, and the challenges that they
+face when using social media streams. This research in-
+dicates that emergency management professionals employ
+two main strategies when searching social media streams:
+keyword-centric and account-centric search strategies. Fur-
+thermore, current search interfaces are inadequate regarding
+the requirements of command and control environments in
+the emergency management domain, where the process of
+information seeking is collaborative in nature and needs to
+support multiple information seekers.
+Categories and Subject Descriptors: H.3.3 [Informa-
+tion Storage and Retrieval]: Information Search and Re-
+trieval
+Keywords: Information Seeking, Emergency Management
+
+1.
+
+INTRODUCTION
+
+“Building 9 has collapsed. I’m stuck, help please! #trapped ”
+
+More often than not, when an emergency or disaster strikes
+victims and onlookers use social media platforms such as
+Twitter, Facebook, Instagram, Flickr to communicate with
+friends, family and others [9, 8, 11]. However, unlike the
+opening message which makes a speciﬁc request for help in a
+particular location, most communications about an incident
+are not as speciﬁc, nor as informative when it comes to using
+this information to support and aid emergency responders.
+During the early stages of an incident, emergency responders
+are often faced with more questions than answers. Informa-
+tion like this may be invaluable in saving someone’s life, but
+it may also be a hoax. Consequently, teams of experts from
+various domains have to collate and ﬁlter information about
+the event, e.g. location, severity, and magnitude, from many
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for proﬁt or commercial advantage and that copies bear
+this notice and the full citation on the ﬁrst page. Copyrights for components
+of this work owned by others than ACM must be honored. Abstracting with
+credit is permitted. To copy otherwise, or republish, to post on servers or to
+redistribute to lists, requires prior speciﬁc permission and/or a fee. Request
+permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+diﬀerent sources (traditional, i.e. phone calls from citizens,
+incoming CB radio communications from police oﬃcers, etc
+as well as new sources coming from social media platforms).
+The response team must cooperate to make sense of the sit-
+uation, by considering context, as well as their experiences
+and skills. Any errors made during this process may lead to
+an inappropriate response to the incident; putting lives and
+property at risk.
+
+It has been argued by Palen, Vieweg and others [9, 8] that
+social media platforms provide new and potentially valuable
+source of information, which if harnessed correctly could be
+of tremendous beneﬁt to emergency response teams. With
+the real-time nature of social media platforms and an in-
+ternet enabled mobile phone in the hands of most citizens
+there is an abundance of information now ﬂooding in when
+a crisis occurs. However, as alluded to already, most of this
+data is not useful for emergency responders, it is potentially
+unreliable, uncorroborated, vague, misleading, obvious and
+already known, or otherwise irrelevant. This means that
+emergency response teams need to deal with the abundance
+of potentially relevant and actionable information, and then
+sort through the information carefully to determine its qual-
+ity, authoritativeness, speciﬁcity, and ultimately its utility
+and usefulness in responding to the situation.
+
+Emergency responders work in time-critical and safety-
+critical environments, thus decisions made in command and
+control will aﬀect the outcome of an adverse event (i.e. where
+to dispatch and allocate the ﬁnite resources at hand). Dur-
+ing an incident, or if one is imminent, the information needs
+will be determined by the context of that event. Emergency
+management services will need to know what type of haz-
+ard or crisis they are faced with, what is the severity of the
+event, where is its occurring location, and how many people
+are likely to be aﬀected. Therefore, the collation of infor-
+mation from various oﬃcial and unoﬃcial sources, such as
+social media platforms, plays a pivotal role in supporting
+their situation awareness [2].
+
+To date there have been numerous works that have shown
+the utility of social media to help in particular situations [6,
+3, 12], for example, providing ﬂood warnings, mapping ﬁre
+out breaks and so on. However, most of the time this re-
+search is done post-hoc, and outwith the context of emer-
+gency response teams. Other work has focused on the de-
+velopment of IR systems that follow, ﬁlter and map events
+in real-time such as Twitcident [1] or Crisees [7]. Such tools
+aim to provide emergency responders and the public with
+an overview of an event, however, again such tools have
+been developed without a deeper appreciation and under-
+
+1073standing of the users that will be using these tools. Also in
+order to develop appropriate, context-sensitive systems that
+support the process of gathering, ﬁltering and analyzing the
+publicly available social media information streams, a better
+understanding of the users, their search needs and the larger
+context of handling an emergency response is required.
+
+Consequently, this paper aims to provide an insight into
+current search behavior of emergency management profes-
+sionals. To this end, we undertake a survey of such profes-
+sionals to ascertain how they rate the importance of social
+media information, what problems they face when dealing
+with large information streams, what actors are involved in
+their processes, and how information from social media plat-
+forms can be incorporated within their current emergency
+management procedures.
+
+2. METHOD: REQUIREMENTS SURVEY
+To ascertain the needs and requirements of emergency re-
+sponse and management teams we devised an online sur-
+vey instrument to capture how social media was being used
+within organizations responding to such incidents. The sur-
+vey was designed for individuals who are involved in emer-
+gency management (EM). The survey contained 64 ques-
+tions which were divided into ﬁve sections:
+
+1. demographic information and expertise,
+
+2. organizational and individual use of social media,
+
+3. information seeking behavior,
+
+4. technology acceptance of social media platforms, and
+
+5. open ended questions on social media platforms for
+
+emergency management.
+
+2.1 Survey Structure and Background
+
+Part 1 of the survey contained standard demographic ques-
+tions along with questions about their current position, how
+long they have worked in that position/organization, which
+department/organization and at which location. Since pre-
+vious studies on cognitive aspects of information seeking
+processes observed substantial diﬀerences in search behav-
+ior between novices and experts [4, 10]. We also included
+questions regarding the participants level of IT expertise,
+their usage of social media, level of seniority and experience
+in their current position. In part 2, participants were asked
+about which social media platforms they used during a crisis,
+how they utilized them, and how useful each platform was.
+We speciﬁcally asked about: Twitter, Facebook, LinkedIn,
+Google+, YouTube, MyVideo, Flickr, Instagram, Pinterest,
+Personal Blogs, and others.
+
+In part 3, we asked several questions regarding their infor-
+mation seeking behavior. Speciﬁcally, about the diﬃculty,
+value, quantity, reliability, and veriﬁability of the informa-
+tion on social media platforms. Also, we wanted to know
+how easily or possible it was to share and communicate their
+ﬁndings within their team/organization. With recent nat-
+ural and man-made adverse events, such as Virginia Tech
+Shooting (2007) or the Japan Earthquake (2012), highlight-
+ing the role of social media platforms as a way to mediate
+global, real-time communication, allowing the public to cre-
+ate and comment on such content, we were particularly in-
+terested in how this surge in information aﬀected emergency
+response teams. For example, reports in the aftermath of
+the Haiti Earthquake (2010) and the public disorder events
+
+in England (2011) made it clear that the volume of user-
+generated content (UGC) created on social media platforms
+could support emergency response agencies to increase situ-
+ation awareness. However, it also has the potential to over-
+load decision makers with too much information [5]. So we
+included a number of questions asking participants whether
+they felt overloaded by the abundance of information, and
+how they perceived the quality and usefulness of the user-
+generated content. In part 4, we examined how accepting
+such organizations are in using social media platforms and
+how user-generated content could improve their current pro-
+cesses.
+
+For sections 2-5 questions were either open ended or asked
+participants to indicate their level of agreement on a seven-
+point Likert scale. When presenting our results, we have
+reduce the seven-point Likert scales for agreement to three
+categories: (i) disagree, (ii) neutral i.e. neither agree nor
+disagree, and (iii) agree. The survey was designed to take
+participants approximately 30 minutes to complete. Three
+follow-up interviews were then conducted with selected par-
+ticipants to gain further insights into their search behaviors.
+2.2 Representativeness and Sample Size
+
+The emergency management domain consists of many dif-
+ferent types of organizations, such as police forces, ﬁre and
+rescue services (FRS), or ambulance services. In order to ob-
+tain a large and representative sample of participants from
+the EM domain, the survey was sent to (i) organizations with
+statutory duties as emergency responders as well as to (ii)
+other professional EM bodies, such as the Emergency Plan-
+ning Society (EPS). Overall using a number of mailing lists,
+the survey was distributed to approximately 350 individuals
+within the United Kingdom. Within three weeks we received
+100 responses, of which 70 were fully completed, and the
+other 30 only partially completed which we excluded from
+this analysis. The resulting response rate was approximately
+20%. Participants reported to work in positions such as
+media manager, public communications oﬃcer, civil contin-
+gency coordinator, and emergency planning oﬃcer and were
+linked to a variety of organizations, such as council/local au-
+thority (37.14%), police force (31.43%), FRS or government
+department (14.28%), health board (5.71%) and other (e.g.
+maritime and coastguard agency) (11.43%).
+
+3. RESULTS
+
+In presenting the results from the survey, we will focus
+mainly on presenting our ﬁndings from part 2 and 3 of the
+survey on information seeking behavior of emergency man-
+agement professionals.
+3.1 Demographics
+
+Most participants (N=70) reported to be in their cur-
+rent position for more than three years (64.29%) and work-
+ing in their current organization for more than three years
+(21.43%), more than 5 years (21.43%) and more than 10
+years (42.86%). It is therefore assumed that a majority of
+the participants is well aware of their roles and responsibili-
+ties in the emergency management environment. In regards
+to their self-assessed IT experience, participants (N=69) re-
+ported to be competent (46.38%), proﬁcient (33.33%) and
+expert (10.14%). When asked about their level of social
+media experience, participants (N=69) reported to be com-
+petent (34.78%), proﬁcient (28.99%) and expert (5.8%).
+
+10743.1.1 Perceived Value of UGC during Incidents
+In order to understand the motivation to search for user-
+generated content during incidents, we asked participants
+about the perceived value of information exchanged on so-
+cial media platforms. When asked if there is too much valu-
+able information 13.23% of the participants agreed, 19.12%
+neither agreed nor disagreed and an overall of 67.65% dis-
+agreed with the statement (N=68). During a follow-up in-
+terview one participant said that “there can never be too
+much valuable information”. However, when asked if there
+is not enough valuable information 35.82% agreed - a further
+19.40% of the participants were undecided (N=68). Inter-
+estingly 44.78% perceived social media platforms to contain
+enough valuable information during an incident. These re-
+sults may seem contradictory but suggest that while valuable
+information exists within UGC ﬁnding the right information
+poses a signiﬁcant challenge.
+
+3.1.2 Finding UGC during Incidents
+Before asking the professionals to detail their search strate-
+gies, we asked them about the diﬃculty they had in ﬁnding
+information about an incident. 11.76% of the participants
+perceived it to be hard or very hard to ﬁnd any informa-
+tion at all (N=68). However, 69.11% perceived this task as
+easy, while 19.12% neither agreed nor disagreed about the
+statement. This seems at odds with the previous ﬁndings,
+however, this was clariﬁed during the interviews when par-
+ticipants pointed out it was easy to ﬁnd general and causal
+information about an incident, but not speciﬁc, relevant, and
+useful information, which could be used to inform decision-
+making. When asked about the ease to formulate their in-
+formation needs, 38.24% of the participants found it easy to
+express their needs, while 23.53% perceived it to be diﬃcult
+(N=68). During the follow-up interviews, participants noted
+that they had a very clear picture of their information needs
+and felt conﬁdent in expressing them most of the time.
+
+Search user interfaces for social media search provide nu-
+merous ways to search/query for information. Table 1 pro-
+vides an overview of the types of search functionality used
+by emergency management professionals to formulate their
+search queries.
+
+Looking at the results, there seemed to be two general
+methods of ﬁndings information. The ﬁrst one is through the
+formulation of a query expressing information needs, similar
+to standard web search interfaces. Additionally, content is
+followed by using social media speciﬁc syntax such as hash-
+tags in the micro-blogging platform Twitter. The second
+method appears to be acccount-centric, meaning that the
+search for information starts with a speciﬁc account or a list
+of accounts, rather than a search query.
+
+3.1.3 Filtering UGC during Incidents
+There is also the need for additional ﬁltering of informa-
+tion. A piece of user-generated content considered to be
+topical relevant, e.g. by matching a number of keywords,
+may actually be irrelevant for considering in the emergency
+management environment. Information can also be classi-
+ﬁed as misinformation and disinformation and thus should
+also not be considered in the decision-making process. When
+asked if there is too much misleading information on social
+media platforms during an incident 42.65% of the partici-
+pants (N=68) agreed, 27.94% disagreed and 29.41% neither
+agreed nor disagreed. Subsequently the majority of the par-
+
+ticipants reported the assessment of importance and veracity
+of user-generated content to be diﬃcult - see Table 1.
+
+In order to understand the process of veriﬁcation and rel-
+evance judgment better, we asked what role the user ac-
+count/proﬁle of the message creator plays during the assess-
+ment - see Table 1. From this we conclude that the majority
+of emergency management professionals surveyed (74.63%,
+N=68) not only base their relevance judgment on factors
+related to topic, geography or time, which are mainly de-
+scribing the context of the incident, but also to the notion of
+trust of the information provider. The speciﬁc factors, that
+are usually taken into consideration during the assessment
+of a user proﬁle were not surveyed and may be part of future
+research, as it would be important for future systems design
+to understand what these judgments are based on. However,
+when looking at search strategies 71.46% of the participants
+(N=68) reported to search for information by looking at al-
+ready known accounts. This leads to believe that previous
+positive or negative experiences with an account eﬀects the
+trust assessment for future incidents. Other methods men-
+tioned to assess information in regards to relevance, trust
+and veracity were visualization using geographical informa-
+tion systems to detect accumulation of similar content in a
+close proximity of the incident site and cross-validation of
+information across multiple information sources.
+3.1.4 Collaborative Work with UGC during Incidents
+The exchange of information relevant to assess the situ-
+ation and to facilitate informed decision-making is another
+key requirement for any information processing system in
+the emergency management domain. The ability to ex-
+change information with other organizations during an inci-
+dent was perceived to be important by 46.16% of the organi-
+zations (N=31). We therefore asked participants about the
+ease to transfer ﬁndings into other systems and the ease to
+exchange social media search results with colleagues inside
+and outside their organizations.
+
+During incidents every organization involved in the re-
+sponse will only have limited information processing resources
+available.
+In order to use these resources more eﬃciently,
+tasks such as ﬁltering, annotating or assessing information
+should be conducted in a collaborative manner. However,
+when participants (N=67) were asked if they are relying on
+other organizations to ﬁlter information only 28.37% agreed,
+whereas 37.31% were neither agreed nor disagreed and 34.33%
+disagreed. This is surprising given that the majority of emer-
+gency management professionals surveyed indicated to con-
+duct account-centric information ﬁltering.
+
+4. SUMMARY AND CONCLUSION
+
+In this paper we surveyed 70 professionals working in
+emergency management and response environments to as-
+certain requirements for using social media search systems.
+Despite the low signal-to-noise ratio in social media streams,
+user-generated content was seen by professionals as a timely
+and potentially useful source of information that could in-
+form the decision-making process. However,
+in order to
+incorporate data from these information streams, profes-
+sionals sought information that was not only topically rel-
+evant, but also geographically and temporally and perhaps
+most importantly that it was veriﬁable and from a cred-
+ible source. Due to the complexity of this task, partici-
+pants reported that this assessment of user-generated con-
+
+107510.45%
+8.95%
+31.35%
+10.44%
+
+When looking for relevant/important information during an incident... Disagree Neutral Agree
+13.43% 76.13%
+...I am mainly using keyword search to ﬁnd information
+...I identify speciﬁc keywords/hashtags to follow an incident
+17.91% 73.14%
+31.34% 37.31%
+...I ﬁlter information on the basis of geo-locations
+...I look at for reliable sources/users and track their account
+17.91% 71.64%
+When searching for information on social media platforms
+Disagree Neutral Agree
+during an incident it is hard to...
+16.18% 46.00%
+...identify important information
+...verify information
+17.65% 58.83%
+When searching for relevant/important information during an incident Disagree Neutral Agree
+I am looking at the proﬁle of the message creator to ...
+...judge the relevance of information
+...judge the trustworthiness of information
+When searching for information on social media platforms
+during an incident it is easy to...
+...transfer my ﬁndings into other systems
+...share my ﬁndings with colleagues inside my organization.
+...share my ﬁndings with colleagues outside my organization.
+
+16.42% 74.63%
+17.91% 74.63%
+Disagree Neutral Agree
+
+29.42%
+25.37%
+26.87%
+
+32.35% 38.24%
+23.88% 50.76%
+23.88% 49.25%
+
+38.24%
+23.52%
+
+8.95%
+7.46%
+
+Table 1: Search strategies and tactics employed when information seeking (N=68).
+
+tent in regards to relevance and veracity was very diﬃcult.
+When searching for user-generated content, we found that
+emergency management professionals employed two main
+strategies: keyword-centric search and account-centric
+search. The former relies on the expression of information
+needs by formulating search queries using keywords or plat-
+form speciﬁc syntax, such as hashtags. Additional search
+operators, e.g.
+to ﬁlter on the basis of geo-information,
+though, were not routinely used. Account-centric search
+for user-generated content entailed ﬁnding a reliable source
+then following that user’s experience of the incident. The
+majority of professionals (74.63%, N=68) reported that this
+assessment of user-generated content regarding trust and
+relevance was based on the proﬁle of the content creator.
+Therefore, future social media search systems will also need
+to provide functionality to support emergency professionals
+in this assessment.
+
+Emergency management environments also bring together
+a number of actors from various backgrounds and organiza-
+tions. Thus, in order to establish a joint understanding of
+the situation, the information seeking and processing needs
+to be collaborative. This was regarded to be very impor-
+tant to facilitate the sharing and communication of ﬁndings
+within response teams. Thus, search interfaces for emer-
+gency management need to be collaborative. In future work,
+we shall explore the speciﬁc needs of collaborative infor-
+mation seeking and sharing in order to design and build
+a search system tailored to the emergency management en-
+vironment.
+
+Acknowledgments: We would like to thank all partic-
+ipants within the Scottish Responder Community and the
+members of the Emergency Planning Society who took the
+time and eﬀort to complete this survey despite the high num-
+ber of severe weather related incidents.
+
+5. REFERENCES
+[1] F. Abel, C. Hauﬀ, G.-J. Houben, R. Stronkman, and
+
+K. Tao. Semantics+ ﬁltering+ search= twitcident.
+exploring information in social web streams. In Proc.
+of the 23rd ACM Hypertext, pages 285–294, 2012.
+
+[2] M. R. Endsley. Toward a theory of situation awareness
+
+in dynamic systems. J. of the Human Factors and
+Ergonomics Society, 37(1):32–64, 1995.
+
+[3] M. F. Goodchild. Citizens as sensors: the world of
+
+volunteered geography. GeoJournal, 69:211–221, 2007.
+
+[4] Q. Gu, D. Mendonca, and D. Wu. An exploration of
+
+information-seeking behavior in emergency
+management. In IEEE Systems, Man and Cybernetics,
+volume 2, pages 1798–1803, 2003.
+
+[5] HMIC. The rules of engagement: A review of the
+
+August 2011 disorders. Her Majesty’s Inspectorate of
+Constabulary, 2011.
+
+[6] A. L. Hughes and L. Palen. Twitter adoption and use
+
+in mass convergence and emergency events. In
+proceedings of the 6th International ISCRAM
+Conference, Gothenburg, Sweden, May 2009.
+
+[7] D. Maxwell, S. Raue, L. Azzopardi, C. Johnson, and
+
+S. Oates. Crisees: Real-time monitoring of social
+media streams to support crisis management. ECIR,
+pages 573–575, 2012.
+
+[8] L. Palen, K. M. Anderson, G. Mark, J. Martin,
+
+D. Sicker, M. Palmer, and D. Grunwald. A vision for
+technology-mediated support for public participation
+& assistance in mass emergencies & disasters. In Proc.
+of the 2010 ACM-BCS VCSC, page 8, 2010.
+
+[9] L. Palen and S. B. Liu. Citizen communications in
+crisis: anticipating a future of ict-supported public
+participation. In ACM SIGCHI, pages 727–736, 2007.
+
+[10] H. Saito and K. Miwa. A cognitive study of
+
+information seeking processes in the www: the eﬀects
+of searcher’s knowledge and experience. In Proc. of the
+2nd WISE, volume 1, pages 321–327, 2001.
+
+[11] A. Sheth. Citizen sensing, social signals, and enriching
+human experience. Internet Comp., 13(4):87–92, 2009.
+
+[12] L. Spinsanti and F. Ostermann. Retrieve volunteered
+geographic information for forest ﬁre. In Proc, of the
+2nd IIR Workshop, 2011.
+
+1076

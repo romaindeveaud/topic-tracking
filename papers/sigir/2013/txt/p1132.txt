@@ -1,0 +1,118 @@
+Building Test Collections
+
+An Interactive Tutorial for Students and Others Without Their Own Evaluation Conference Series
+
+National Institute of Standards and Technology
+
+Ian Soboroff
+
+While existing test collections and evaluation conference
+eﬀorts may suﬃciently support one’s research, one can easily
+ﬁnd oneself wanting to solve problems no one else is solving
+yet. But how can research in IR be done (or be published!)
+without solid data and experiments? Not everyone can talk
+TREC, CLEF, INEX, or NTCIR into running a track to
+build a collection.
+
+This tutorial aims to teach how to build a test collection
+using resources at hand, how to measure the quality of that
+collection, how to understand its limitations, and how to
+communicate them. The intended audience is advanced stu-
+dents who ﬁnd themselves in need of a test collection, or
+actually in the process of building a test collection, to sup-
+port their own research. The goal of this tutorial is to lay
+out issues, procedures, pitfalls, and practical advice.
+
+Attendees should come with a speciﬁc current need for
+data, and/or details on their in-progress collection building
+eﬀort. The ﬁrst half of the course will cover history, tech-
+niques, and research questions in a lecture format. The sec-
+ond half will be devoted to collaboratively working through
+attendee scenarios.
+
+Upon completion of this tutorial, attendees will be famil-
+iar with the history of the test collection evaluation paradigm;
+understand the process of beginning from a concrete user
+task and abstracting that to a test collection design; under-
+stand diﬀerent ways of establishing a document collection;
+understand the process of topic development; understand
+how to operationalize the notion of relevance, and be familiar
+with issues surrounding elicitation of relevance judgments;
+understand the pooling methodologies for sampling docu-
+ments for labeling, and be familiar with sampling strategies
+for reducing eﬀort; be familiar with procedures for measur-
+ing and validating a test collection; and be familiar with
+current research issues in this area.
+
+Categories and Subject Descriptors
+
+H.3.3 [Information Search and Retrieval]: Misc.
+
+Keywords: test collections; experimental methods
+
+Permission to make digital or hard copies of part or all of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for proﬁt or commercial advantage and that copies
+bear this notice and the full citation on the ﬁrst page. Copyrights for third-
+party components of this work must be honored. For all other uses, contact
+the owner/author(s).
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+ACM 978-1-4503-2034-4/13/07.
+
+1. Introduction to test collections: basic concepts:
+task, documents, topics, relevance judgments, and mea-
+sures; history of Cranﬁeld paradigm.
+
+2. Task: a task-centered approach to conceiving test col-
+lections; metrics as an operationalization of task suc-
+cess; understanding the user task and the role of the
+system.
+
+3. Documents: the relationship between documents and
+task; naturalism vs constructivism; opportunity sam-
+pling and bias; distribution and sharing.
+
+4. Topics: designing topics from a task perspective. sources
+
+for topics. exploration or topic development. extract-
+ing topics from logs. topics and queries. topic set size.
+
+5. Relevance: deﬁning relevance and utility starting from
+the task; obtaining labels, explicit and implicit elic-
+itation (highlighting); Interface considerations; inter-
+annotator agreement; errors; crowdsourcing for rele-
+vance judgments; validation, process control, quality
+assurance; annotator skill set.
+
+6. Pooling: problem of scale and bias; breadth of pools,
+multiple systems; completeness vs. samples; methods;
+estimating pool depths; leave-one-out test, reusability;
+double pooling.
+
+7. Analysis: bounding the score resolution; contrast-
+ing many diﬀerent systems or variations of a system;
+PCA of topic:run scores, bounding of topic breadth;
+ANOVA, factor analysis, regression; statistical signif-
+icance and meaningful diﬀerences; calibration by user
+pilot study; per-topic analysis and failure analysis; bias.
+
+8. Test collection diagnosis: LOO test revisited; un-
+judged == irrelevant; diﬀerentiating poor systems from
+collection bias.
+
+9. Validation: user study; side-by-side comparison; a/b
+
+testing; interleaving.
+
+10. Pooling and sampling: pooling as a sampling method;
+
+pooling as optimization; move-to-front pooling; uni-
+form sampling, stratiﬁed sampling, measure sampling;
+minimal test collections.
+
+11. Advanced task concepts: ﬁltering, supporting sys-
+tem adaptation; sessions, time, user adaptation; con-
+text, feedback; exploration and fuzzy tasks; novelty,
+diﬀerential relevance; fundamental limits of Cranﬁeld.
+
+1132

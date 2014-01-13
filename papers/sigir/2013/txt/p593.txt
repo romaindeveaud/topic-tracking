@@ -1,0 +1,1638 @@
+Sentiment Diversiﬁcation with Different Biases
+
+Elif Aktolga and James Allan
+
+Center for Intelligent Information Retrieval
+
+Amherst, Massachusetts
+
+{elif, allan}@cs.umass.edu
+
+School of Computer Science
+
+University of Massachusetts Amherst
+
+ABSTRACT
+Prior search result diversiﬁcation work focuses on achiev-
+ing topical variety in a ranked list, typically equally across
+all aspects. In this paper, we diversify with sentiments ac-
+cording to an explicit bias. We want to allow users to switch
+the result perspective to better grasp the polarity of opinion-
+ated content, such as during a literature review. For this, we
+ﬁrst infer the prior sentiment bias inherent in a controversial
+topic – the ‘Topic Sentiment’. Then, we utilize this infor-
+mation in 3 diﬀerent ways to diversify results according to
+various sentiment biases: (1) Equal diversiﬁcation to achieve
+a balanced and unbiased representation of all sentiments on
+the topic; (2) Diversiﬁcation towards the Topic Sentiment,
+in which the actual sentiment bias in the topic is mirrored
+to emphasize the general perception of the topic; (3) Diver-
+siﬁcation against the Topic Sentiment, in which documents
+about the ‘minority’ or outlying sentiment(s) are boosted
+and those with the popular sentiment are demoted.
+
+Since sentiment classiﬁcation is an essential tool for this
+task, we experiment by gradually degrading the accuracy of
+a perfect classiﬁer down to 40%, and show which diversiﬁ-
+cation approaches prove most stable in this setting. The re-
+sults reveal that the proportionality-based methods and our
+SCSF model, considering sentiment strength and frequency
+in the diversiﬁed list, yield the highest gains. Further, in
+case the Topic Sentiment cannot be reliably estimated, we
+show how performance is aﬀected by equal diversiﬁcation
+when actually an emphasis either towards or against the
+Topic Sentiment is desired:
+in the former case, an average
+of 6.48% is lost across all evaluation measures, whereas in
+the latter case this is 16.23%, conﬁrming that bias-speciﬁc
+sentiment diversiﬁcation is crucial.
+
+Categories and Subject Descriptors: H.3.3 [Information
+Search and Retrieval]: Retrieval Models
+
+General Terms: Experimentation, Algorithms, Measure-
+ment
+
+Keywords: Diversity, Opinions, Sentiment, Proportional-
+ity
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for proﬁt or commercial advantage and that copies bear
+this notice and the full citation on the ﬁrst page. Copyrights for components
+of this work owned by others than ACM must be honored. Abstracting with
+credit is permitted. To copy otherwise, or republish, to post on servers or to
+redistribute to lists, requires prior speciﬁc permission and/or a fee. Request
+permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+1.
+
+INTRODUCTION
+
+In previous work diversiﬁcation has mainly been applied
+for better topical variety in search results [9, 25, 26, 27].
+Equal preference is typically given to all aspects. How can
+opinionated content exhibiting sentiments be diversiﬁed? Ini-
+tial approaches have been presented [10, 17, 18]; however
+these only consider equal diversiﬁcation. In this paper, we
+view the problem from a high-level perspective to allow for
+sentiment diversiﬁcation according to diﬀerent biases, which
+will be vital for situations like a literature review on a con-
+troversial topic.
+
+Consider the topic ‘global warming.’ In a typical use case,
+a user engages in a comprehensive literature review with the
+aim of understanding the positions on this topic. This in-
+volves – besides searching and ﬁnding relevant opinionated
+documents [16] – understanding and mentally categorizing
+opinionated content. This can be done by organizing the
+discussed arguments by topical content; or, they can also be
+grouped by sentiment, such as positive, negative, neutral,
+and mixed [18]. We focus on facilitating the latter approach
+for the user. For some topics that can clearly be general-
+ized into ‘pro’ versus ‘con’ arguments, this sentiment cate-
+gorization is more natural, whereas it can be less obvious for
+topics like global warming that are associated with various
+arguments. Focusing on the sentiment dimension of these
+arguments, we can see that negative sentiments for global
+warming typically express criticism and concern about it
+and its eﬀects on the environment. Those with positive sen-
+timent often claim that worries about global climate change
+are unjustiﬁed (“there is no such issue”), playing down the
+concerns in a ‘calming’ (i.e., positive) way. Mixed or neutral
+statements either express no sentiments or contain an equal
+amount of positive and negative arguments. Those could be
+“I don’t care”, or “It’s a serious problem but we’re handling
+it” kind of stances towards global warming.
+
+Getting back to our use case: while a balanced and un-
+biased presentation of the results helps the user understand
+various viewpoints on a topic, discerning the topic’s polarity
+is harder if minority opinions are ‘buried’ in the results [18].
+Therefore, the user should be able to switch the result per-
+spective as needed. This way, she can either obtain a bal-
+anced or a biased view on majority or minority opinions,
+make her own comparisons across the representations, and
+perform this task in a more informed manner. Note that
+this is diﬀerent from showing all positive or all negative or
+all neutral/mixed documents at a time: with such a rep-
+resentation the user would still need to draw her own con-
+clusions about which sentiments form majority or minority
+
+593in results while maximizing the number of documents con-
+taining novel information [1, 3, 6, 9, 25, 26, 27]. One of the
+earliest works is the maximal marginal relevance (MMR)
+approach [3], which employs content-based similarity mea-
+sures to balance the tradeoﬀ between novelty and relevance.
+More recently, researchers have shown explicit diversiﬁcation
+approaches to be superior over implicit diversiﬁcation tech-
+niques: well-known algorithms are xQuAD [25, 26, 27], IA-
+select [1], and more recently PM-1 and PM-2 [9]. Other ap-
+proaches to topical diversity are language modeling based [31],
+probabilistic [4] and correlation-based [30]. Very recent re-
+search addresses personalized diversiﬁcation [29], blog feed
+diversity [19, 28], and combined implicit and explicit aspect
+diversiﬁcation [15].
+
+Among these approaches, it is common to equally or uni-
+formly diversify across all query aspects or subtopics due to
+the lack of data [9, 25, 26, 27]. Although the TREC Web
+Track diversity task provides topical query aspects [8], dis-
+tributions over these aspects are not included. Agrawal et
+al. [1] use their own classiﬁers and judgments for obtaining
+query intent aspect distributions. Further, the NTCIR-9
+Intent task provides non-uniform aspect probabilities [24].
+One of our contributions in this paper is to present alter-
+natives to the equal distribution approach (Section 3.4): a
+query’s topic’s sentiment distribution can be employed in
+various ways to yield an emphasis for a certain bias. Topi-
+cal diversity could also beneﬁt from these ideas.
+
+The proportionality-based approaches PM-1 and PM-2 [9]
+
+distinguish themselves from prior research by explicitly match-
+ing the aspect distribution in the diversiﬁed list to the over-
+all popularity of these aspects, thus yielding a proportionally
+diversiﬁed list. We adapt this approach to sentiment diver-
+sity, and propose a minor variation for dealing with retrieval
+limitations (Section 3.3).
+
+Extensive work on opinion detection and retrieval has
+dealt with techniques to boost opinionated documents in
+retrieval [14, 28, 32, 33]. Prior work focusing on opinion
+diversity is very recent: Demartini and Siersdorfer describe
+a study about opinions in search results as given by popular
+search engines for controversial queries [11]. In later work,
+Demartini then tackles opinion diversiﬁcation [10]: his ap-
+proach is based on the xQuAD framework [25]. Retrieved
+search results are classiﬁed into the sentiment categories pos-
+itive, negative, or objective. Diversiﬁcation ensures maxi-
+mum variety among these aspects with uniform preference.
+We implement this approach as the SCS model and combine
+it with the 3 biases (Section 3.2.1). The SCSF model is a
+further extension, presented in Section 3.2.2.
+
+Kacimi and Gamper propose a diﬀerent opinion diversiﬁ-
+cation framework for controversial queries [17, 18]: three cri-
+teria are considered for diversiﬁcation: topical relevance, se-
+mantic diversiﬁcation, and sentiment diversiﬁcation. Their
+model favors documents most diﬀerent in sentiment direc-
+tion and in the arguments they discuss. The sentiments are
+again one of positive, negative, and neutral. In the model
+the components are linearly combined; however, in order to
+ﬁnd the documents maximizing the distances for all criteria
+the authors consider all subsets of documents. Our work
+diﬀers from this work in several points: (1) We perform sen-
+timent diversiﬁcation only and not opinion diversiﬁcation.
+Opinions refer to topical content, whereas sentiments are a
+non-topical aspect that we focus on in this paper. (2) This
+choice allows us to study sentiment diversiﬁcation perfor-
+
+Figure 1: Topic Sentiment: Dots represent relevant docu-
+ments for this topic, which are grouped according to their
+sentiments. The obtained sentiment distribution is used for
+sentiment diversiﬁcation.
+
+opinions. Our aim is to analyze this information for the
+user and to match the inferred trend as closely as possible
+in the results. For this, we need to have a good grasp of
+the topic a priori: we consider a large pool of relevant docu-
+ments about the topic, which are grouped by sentiments as
+visualized in Figure 1. Then, we can infer the topic’s senti-
+ment distribution or inherent bias – Topic Sentiment – from
+this analysis. We categorize the aspects ‘mixed’ and ‘neu-
+tral’ together to represent the ‘balanced’ aspect, whereas
+‘positive’ and ‘negative’ refer to arguments that are clearly
+biased towards one side only.
+If Figure 1 represented the
+Topic Sentiment for global warming, this could be inter-
+preted as the issue being perceived with great concern since
+negative sentiments constitute the majority, and while there
+are some ‘balanced’ positions on it, the positive sentiments
+form a clear minority. By utilizing this information during
+diversiﬁcation, three biases are emphasized in search results:
+(1) Equal diversiﬁcation by preferring all sentiments equally.
+This allows for a balanced representation of all sentiments
+on the topic; (2) Diversiﬁcation towards the Topic Senti-
+ment, in which the resulting reranked list mirrors the actual
+sentiment bias in a topic. This approach highlights the gen-
+eral perception of a topic; (3) Diversiﬁcation against the
+Topic Sentiment, in which documents about the minority
+sentiment(s) are boosted whereas those with the majority
+sentiment are demoted. Such a list highlights unusual and
+outlying opinions on the topic.
+
+In this paper we propose diﬀerent diversiﬁcation models
+for sentiment diversity with these 3 biases, and perform ex-
+periments using the TREC Blog Track data [23]. Since sen-
+timent classiﬁcation is an essential tool for this task, we
+experiment by gradually reducing the accuracy of a perfect
+classiﬁer down to 40%, and show which diversiﬁcation ap-
+proaches prove most stable in this setting. Further, in case
+the Topic Sentiment cannot be reliably estimated, we show
+how performance is aﬀected by equal diversiﬁcation when
+actually an emphasis either towards or against the Topic
+Sentiment is desired. The results reveal that particularly
+when highlighting minority sentiments, diversifying with the
+corresponding bias yields signiﬁcant improvements.
+
+2. RELATED WORK
+
+There is a large amount of work in the area of topical
+diversity: the main aim is to eliminate topical redundancy
+
+          positive      negative            neutral + mixed TOPIC  T 594mance with diﬀerent biases, which has not been researched
+in prior work.
+
+In this context, unlike topical diversity we make a sim-
+plifying assumption that each query belongs to one topic
+and therefore represents one topical aspect. We avoid deal-
+ing with ambiguity by using long and speciﬁc queries in our
+experiments, as explained in Section 4. That is, the topi-
+cal dimension is kept static so we can focus on the varied
+sentiment dimension. We leave it to future work to explore
+the interplay of topical and sentiment aspects together for
+diversiﬁcation.
+
+3. SENTIMENT DIVERSIFICATION
+3.1 Introduction
+
+In order to diversify a retrieved list with respect to the
+distribution of sentiments in a query’s topic, we need to
+introduce a few concepts ﬁrst. Let Q be a query, and let T
+be the query’s topic T (Q), abbreviated as T for simplicity.
+As visualized in Figure 1, we deﬁne T to include all the
+relevant documents that can be retrieved for Q, i.e., T =
+rel(Q). Further, let each document D in T have a sentiment,
+i.e., each document is positive, negative, neutral or mixed.
+These can be generalized to countable sentiment criteria σ ∈
+sent(T ). We will use this sentiment information from T
+in our models to diversify search results according to the
+distribution of sentiments in the topic.
+
+Sentiment criteria of the form positive, negative, and neu-
+tral/mixed can take diﬀerent shapes when converted into a
+sentiment score. In the literature [10, 17, 23] we identiﬁed
+a document to either have a single discrete sentiment from
+{−1, 0, 1}, or the sentiment is broken down into three scores
+positivity, negativity, and neutrality such that they sum to
+1.0 for a single document. We refer to these latter ones as
+ﬁner grained “fractional scores” in the rest of the paper. Our
+models are designed for these kinds of scores, but discrete
+scores can also be handled by simple conversion as we will
+show later.
+
+Below we consider two diﬀerent diversiﬁcation frameworks
+
+and present several modiﬁcations to them.
+3.2 Retrieval-Interpolated Diversiﬁcation
+
+Algorithm 1 Retrieval Interpolated Diversiﬁcation Frame-
+work.
+
+do
+
+1 S = ∅
+2 while|S| < τ and |R| > 0
+3
+4
+5
+6
+7 return S
+
+D∗ = arg maxD∈R λRetC(Q) + (1 − λ)SentC(T )
+R = R \ {D∗}
+S = S ∪ {D∗}
+
+where RetC(Q) is the retrieval contribution, which is always
+estimated with P (D|Q) – how likely D is to be relevant to
+Q by content, and SentC(T ) is the sentiment contribution,
+which we will deﬁne in two diﬀerent ways below. The scores
+from these two components are interpolated for diversity
+estimation.
+3.2.1
+In this version of the model we estimate the sentiment
+contribution in the maximization objective function (Equa-
+tion 1) as follows:
+
+Sentiment Contribution by Strength (SCS)
+
+SentC(T ) = P (D, ¯S|T )
+
+(2)
+Here P (D, ¯S|T ) measures how much D can contribute to
+the sentiment diversity of S. Structurally, this resembles
+xQuAD [25] with the diﬀerence that the estimation is con-
+ditioned on the query’s topic T .
+
+In order to make the model more ﬂexible towards senti-
+ment scores, we deﬁne each document to have a fractional
+score for each sentiment criterion σ ∈ sent(T ). For exam-
+ple, a document may be classiﬁed as positive with 75% con-
+ﬁdence. Then, this can be converted into a trinary score
+P (D|σ = positive) = 0.75, P (D|σ = neutral) = 0.25, and
+P (D|σ = negative) = 0. Fractional classiﬁcation scores di-
+rectly obtained from a classiﬁer (such as logistic regression)
+ﬁt in nicely into this framework. If documents are manually
+judged, they are often associated with only one ‘dominant’
+sentiment score from {−1, 0, 1} such as -1, which can be con-
+verted into a 100% negative score. Given this information,
+we can further decompose P (D, ¯S|T ) as follows:
+
+(cid:88)
+(cid:88)
+
+σ∈sent(T )
+
+rank=
+
+σ∈sent(T )
+
+P (D, ¯S|T ) =
+
+P (D, ¯S|σ) · P (σ|T )
+
+P (D|σ) · P ( ¯S|σ) · P (σ|T )
+
+(3)
+
+(4)
+
+where P ( ¯S|σ) denotes the likelihood of σ not being satis-
+ﬁed by the documents already chosen into S (see below for
+further derivation) and P (σ|T ) stands for the importance of
+sentiment σ to topic T . This is discussed in detail in Sec-
+tion 3.4. From Equation 3 to Equation 4 we make the same
+independence assumption as Santos et al. [25]: the diversity
+estimation of D with respect to the sentiments σ can be
+made independently of the documents already selected into
+S. We continue with Equation 4:
+
+(cid:88)
+(cid:88)
+(cid:88)
+
+σ∈sent(T )
+
+σ∈sent(T )
+
+σ∈sent(T )
+
+=
+
+=
+
+P (D|σ) · P ( ¯S|σ) · P (σ|T )
+
+P (D|σ) · P (σ|T ) · (cid:89)
+P (D|σ) · P (σ|T ) · (cid:89)
+
+Dj∈S
+
+Dj∈S
+
+P (Dj|σ)
+
+1 − P (Dj|σ)
+
+(5)
+
+Algorithm 1 shows the Retrieval-Interpolated Diversiﬁca-
+tion Framework, which is similar to xQuAD, ﬁrst introduced
+by Santos et al. [25] for topical diversity. In this diversiﬁ-
+cation framework, documents retrieved in R are iteratively
+added to the new ranked list S. The τ documents are chosen
+according to the maximization objective function in line 4:
+
+∗
+
+= argmaxD∈R λ · RetC(Q) + (1 − λ) · SentC(T )
+
+D
+
+(1)
+
+Here we make another independence assumption for P (Dj|σ)
+as Santos et al. [25]: the likelihood of not sampling Dj’s sen-
+timent from T is independent of the sentiments of the other
+documents in S. Since each Dj was independently chosen
+into S, this is a reasonable assumption.
+
+To summarize, Equation 5 estimates the diversity of a
+document D by considering how well D represents each sen-
+timent criterion, which is weighted by how important that
+
+595D∗ = arg maxD∈R λ · quotient[σ∗] · P (D|σ∗) + (1 − λ)(cid:80)
+
+2sσ +1
+
+σ(cid:54)=σ∗ quotient[σ] · P (D|σ)
+
+Algorithm 2 Diversity by Proportionality (PM-2).
+
+do
+
+1 S = ∅
+2 ∀σ sσ = 0
+3 while|S| < τ and |R| > 0
+4
+for σ ∈ sent(T )
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+
+quotient[σ] = vσ
+σ∗ = arg maxσ quotient[σ]
+R = R \ {D∗}
+S = S ∪ {D∗}
+for σ ∈ sent(T )
+
+sσ = sσ +
+
+do
+
+do
+
+(cid:80)
+
+P (D∗|σ)
+
+γ∈sent(T ) P (D∗|γ)
+
+15 return S
+
+sentiment criterion is to T . This whole part is demoted ac-
+cording to how many documents of the same sentiment S
+already contains.
+3.2.2 Sentiment Contribution by Strength and Fre-
+
+quency (SCSF)
+
+We consider an alternative formulation of the sentiment
+contribution component above in Equation 1 in which the
+punish/reward factor is estimated slightly diﬀerently:
+
+SentC(T ) = P (D|T ) · (1 − P (S|T ))
+
+(6)
+where P (D|T ) stands for how important D’s sentiment is for
+T , and 1 − P (S|T ) describes how well the sentiments from
+T are already represented in S. We further derive:
+
+P (D|T ) · (1 − P (S|T ))
+
+= P (D|T ) − P (D|T ) · P (S|T )
+
+(cid:88)
+
+=
+
+σ∈sent(T )
+
+P (D|σ) · P (σ|T ) − P (D|σ) · P (σ|T ) · P (S|σ) (7)
+
+Here we apply the Bayes’ Rule to P (S|σ):
+
+P (S|σ) =
+
+P (σ|S) · P (S)
+
+P (σ)
+
+rank= P (σ|S)
+
+(8)
+
+which is rank-equivalent since P (S) is a constant across all
+documents in an iteration, and P (σ), the prior probability of
+a particular sentiment, is equal across all sentiments. Hence
+we obtain from Equation 7:
+
+which is the number of documents in S having dominant
+sentiment σ. Each document in S can be mapped into its
+dominant or most conﬁdent sentiment class σ ∈ sent(T ),
+typically positive, negative, or neutral/mixed. Given this,
+we count the number of times a particular sentiment σ oc-
+curs in S as sent(σ, S). We set P (σ|S) = 0 if S = ∅ to avoid
+zero division in the ﬁrst iteration.
+
+To summarize, this formulation calculates the punish/ re-
+ward factor directly from the frequency of documents present
+in the whole set S with certain sentiments. Contrarily, in the
+SCS model the strength of sentiments of each document in
+S is considered individually, whereas the frequency of such
+documents is implicit in the multiplication over all docu-
+ments in S.
+In the experiments we empirically verify the
+eﬀectiveness of the two models in sentiment diversiﬁcation
+to draw conclusions about their usefulness.
+3.3 Diversity by Proportionality
+
+As a second diversiﬁcation framework we consider Algo-
+rithm 2, the best-performing approach in Dang and Croft’s
+work [9]. This framework is based on the Sante-Lagu¨e method
+for seat allocation and is adapted here to sentiment diver-
+siﬁcation.
+In each iteration documents are chosen based
+on the proportionality of the diversiﬁed list. We only de-
+scribe modiﬁed components due to space limitations.
+In-
+stead of applying the algorithm to topical aspects, here it is
+employed together with sentiments σ ∈ sent(T ). Further,
+P (D|σ) is estimated by means of fractional sentiment scores
+as deﬁned in Section 3.2 instead of estimating the relevance
+of the document with respect to a (sub)topical aspect. Note
+that under this modiﬁcation, a document is purely evaluated
+on the basis of its sentiments and not according to topical
+relevance.
+
+The variables vσ and sσ in the quotient are important.
+The former is the number of relevant documents the senti-
+ment σ should have, whereas the latter represents the es-
+timated number of documents actually present in the list
+for σ. vσ at a particular rank i can easily be inferred from
+P (σ|T ) as follows:
+
+vσ = (cid:98)i · P (σ|T ) + 0.5(cid:99)
+
+(11)
+
+According to PM-2, sσ is updated with the fractional sen-
+timent scores of the chosen document, since each sentiment
+takes up a ‘portion’ of the seats in S. This denotes how
+well the chosen document represents each sentiment. For
+
+(cid:88)
+(cid:88)
+(cid:88)
+
+σ∈sent(T )
+
+σ∈sent(T )
+
+σ∈sent(T )
+
+=
+
+=
+
+P (D|σ) · P (σ|T ) − P (D|σ) · P (σ|T ) · P (σ|S)
+
+P (D|σ) · P (σ|T ) · (1 − P (σ|S))
+
+P (D|σ) · P (σ|T ) · P (¯σ|S)
+
+(9)
+
+Now we can see that the ﬁrst part of Equation 9 is identical
+to Equation 5. We can estimate the components P (D|σ) ·
+P (σ|T ) the same way as described in Sections 3.2 and 3.4.
+However, P (¯σ|S), the likelihood of S not having sentiment
+σ, is new. We deﬁne its complement as follows:
+
+P (σ|S) =
+
+sent(σ, S)
+
+|S|
+
+(10)
+
+596the relationship between document sentiments and the topic
+sentiment distribution, please refer to Section 3.4.
+3.3.1 Diversity by Proportionality with Minimum Avail-
+
+able Votes (PM-2M)
+
+Unlike the seat allocation problem in a voting system,
+in a retrieved list of documents there is an additional con-
+straining factor. The top K documents retrieved from a
+search system constitute the source for diversiﬁcation, so it
+is possible that a particular sentiment is underrepresented
+in this list. Unless the system requests more documents,
+the desired proportionality in the diversiﬁed list may not
+be optimally achieved with the current set of documents.
+In this situation, with respect to PM-2 the given votes vσ
+overestimate lσ, the actual number of documents with senti-
+ment σ in the retrieved top K set. For a large enough rank
+K, this may result in a suboptimally diversiﬁed list where
+documents with an over-emphasized sentiment are exploited
+early in the ranks. Therefore, we propose a small change to
+the quotient deﬁned in Algorithm 2:
+
+quotient[σ] =
+
+min(vσ, lσ)
+
+2sσ + 1
+
+(12)
+
+which ensures that the quotient does not over-emphasize the
+importance of a sentiment if data is missing in the retrieved
+list. This technique has a remote resemblance to dispro-
+portionate stratiﬁed sampling in that documents are cho-
+sen slightly diﬀerently than dictated by the topic sentiment
+distribution in favor of improved overall diversity. We re-
+fer to this modiﬁed diversiﬁcation approach as PM-2M and
+compare its eﬀectiveness to PM-2, SCS and SCSF in the
+experimental section 4.
+3.4 Favoring Different Biases in Search Re-
+
+sults
+
+In the presentation of the diversiﬁcation models above
+P (σ|T ) plays a central role in deﬁning which sentiment bias
+is favored in search results.
+Intuitively, this component
+stands for the importance of sentiment σ to topic T . Below
+we present three diﬀerent possible biases in search results
+that the estimation of P (σ|T ) impacts.
+3.4.1 Equal Sentiment Diversiﬁcation (BAL)
+This is our baseline approach, which does not give pref-
+erence to any sentiment, but weights them equally or uni-
+formly. Therefore, this approach does not utilize informa-
+tion from the query’s topic about its prior sentiment distri-
+bution. We set
+
+P (σ|T ) =
+
+1
+
+(13)
+which results in each sentiment criterion σ ∈ sent(T ) to be
+considered equally important. We refer to this bias method
+as ‘Balance’ (BAL) in Section 4.
+
+|sent(T )|
+
+We assume that with this balanced estimation the SCS
+model is equivalent to Demartini’s [10] approach. Since this
+detail is not explicitly described in their work, it is most
+reasonable to assume an equal bias as in prior research.
+3.4.2 Diversifying Towards the Topic Sentiment (CRD)
+In this approach we choose to diversify the retrieved list
+towards the distribution of sentiments in the query’s topic.
+
+Such results strongly represent the crowd’s opinion(s). For
+this, we need information about the sentiments in T . Re-
+call from Section 3.1 that T is deﬁned as a topic space to
+include all the relevant documents that can be retrieved for
+the query Q, i.e., T = rel(Q). Then, we can map each
+relevant document into its dominant or most conﬁdent sen-
+timent class σ ∈ sent(T ). Given this, we count the number
+of times a particular sentiment σ occurs in T as sent(σ, T ).
+This allows us to interpret P (σ|T ) as the likelihood of sen-
+timent σ being drawn from T :
+
+P (σ|T ) =
+
+sent(σ, T )
+
+|T|
+
+(14)
+
+which represents the fraction of documents in T with dom-
+inant sentiment σ; for instance the fraction of positive doc-
+uments in T . We name this bias as ‘Crowd’ (short: CRD).
+3.4.3 Diversifying Against the Topic Sentiment (OTL)
+What if a user is interested in viewing minority sentiments
+on the topic? For favoring outlying sentiments, we need to
+diversify the search results against the Topic Sentiment. For
+this, we introduce one minor modiﬁcation to CRD above:
+Let the n sentiment estimations for σ ∈ sent(T ) be sorted
+in increasing order of P (σ|T ). Then, for each σ at rank i
+we swap its estimation P (σ|T ) with the one at rank n − i.
+This ‘reverses’ the values in the topic distribution without
+changing the properties of the distribution. Consequently, if
+originally in T positive documents are strongly favored and
+negative documents are least favored, this trend is reversed
+through the value swap in T so that outlying sentiments
+(negative documents) will be strongly preferred during di-
+versiﬁcation. We refer to this bias as ‘Outlier’ (OTL) in the
+experiments (Section 4).
+Irrespective of the preferred bias, we apply Add-1 Smooth-
+ing [5] to P (σ|T ) estimates to account for zero probabilities.
+In order to correct such unrealistic estimations, an unob-
+served sentiment class is assigned a very small probability,
+and the estimations for the other sentiment classes are ad-
+justed accordingly.
+
+4. EXPERIMENTS
+4.1 Setup
+Retrieval Corpus As retrieval corpus we use the TREC
+Blog Track data from 2006 and 2008 [23] for all our experi-
+ments. For preparation, the DiﬀPost algorithm is applied to
+the corpus for better retrieval as shown in prior work [20, 22].
+Further, we perform stop word removal and Porter stem-
+ming.
+
+Queries and Retrieval Model We split the 150 TREC
+Blog Track 2008 queries into 3 non-overlapping randomly
+chosen sets of size 50 each in order not to bias training or
+testing towards a speciﬁc year: split 1 is used for train-
+ing and tuning parameters; the results in this paper are
+reported on split 2, and split 3 is reserved for sentiment
+classiﬁer training. For our diversiﬁcation experiments, we
+use a strong retrieval baseline: the queries’ stopped title
+and description texts are combined for use with the Sequen-
+tial Dependence Model in Lemur/Indri [21], smoothed using
+Dirichlet (µ = 10, 000). All diversiﬁcation models are ap-
+plied to the top K = 50 retrieved documents as determined
+
+597during training. The retrieval scores are normalized to yield
+document likelihood scores.
+
+Sentiment Classiﬁcation The sentiment classiﬁer is trained
+as a logistic regression model using Liblinear [13] with de-
+fault settings. For this, we utilize the judged documents
+from the 50 split 3 TREC Blog Track queries. Training
+is done for three classes – positive, negative, and neutral
+to obtain probability estimates that are employed as frac-
+tional scores for sentiment estimation (Section 3.2.1). As
+features we extract Sentiwordnet 3.0 terms with their length-
+normalized term frequencies in the documents [12].
+
+Topic Sentiment Estimation Given a query, the topic
+sentiment distribution can be estimated in various ways: (1)
+in the form of opinion relevance judgments for a pool of doc-
+uments where all judged relevant documents are included in
+the distribution; (2) by retrieving the top M documents from
+a separate corpus or web search engine and tagging them
+with sentiment judgments. We experimented with both ap-
+proaches but only present the results for (1) here due to
+space limitations: we use the relevance judgments from the
+TREC 2008 Blog Track [23], which are divided into the same
+sentiment aspects as required in the models.
+
+4.2 Evaluation Measures
+
+The sentiment diversiﬁcation approaches are evaluated us-
+ing standard evaluation measures that were designed for top-
+ical diversity: Precision-IA [1], s-recall [31], α-NDCG [6],
+ERR-IA [2], and NRBP [7]. The former two measures are
+set-based, whereas the remaining ones are cascade measures
+as described by Ashkan and Clarke [2], punishing redun-
+dancy through parameters α (α-NDCG, ERR-IA, NRBP)
+and additionally β (NRBP), which represents user patience.
+In order to measure sentiment diversity with a chosen bias,
+we implement all the measures in their intent-aware (or for
+us, ‘sentiment-aware’) version [1, 2]. Hence, the weighted
+average over the sentiment-dependent scores of a measure is
+computed as given by measure-IA for a query Q and topic
+T :
+
+(cid:88)
+
+σ∈sent(T )
+
+measure-IA(Q, T ) =
+
+P (σ|T ) · measure(Q|σ) (15)
+
+where P (σ|T ) deﬁnes the weight for the sentiment-speciﬁc
+result yielded by measure(Q|σ).
+
+Intent-aware measures can be rank-speciﬁc such as Precision-
+
+IA@k or α-NDCG@k for example, or rank-independent as
+NRBP. We utilize another rank-speciﬁc measure deﬁned by
+Dang and Croft [9], Cumulative Proportionality (CPR) at
+rank K:
+
+K(cid:88)
+
+i=1
+
+CP R@K =
+
+1
+K
+
+P R@i
+
+(16)
+
+in which P R@i is computed as the inverse normalized dis-
+proportionality at rank i (see [9] for details). Here, we deﬁne
+the disproportionality at rank i as follows:
+
+(cid:88)
+
+DP @i =
+
+σ∈sent(T )
+
+cσ(vσ − sσ)2 +
+
+1
+2
+
+n2
+
+N R
+
+(17)
+
+where vσ is the number of relevant documents the sentiment
+σ should have, sσ is the number of relevant documents ac-
+tually found for σ, nN R is the number of documents that
+are non-relevant (to any sentiment), and cσ = 1 if vσ ≥ sσ,
+0 otherwise. This measure allows us to assess how propor-
+tional the diversiﬁed list is with respect to the desired topic
+distribution. vσ can be inferred from the true topic sen-
+timent distribution P (σ|T ) in the same way as detailed in
+Equation 11. As noted by Dang and Croft [9], CPR penal-
+izes the under-representation of aspects (here: sentiments)
+and the over-representation of non-relevant documents.
+4.3 Results
+
+In this section we discuss the results of the retrieval base-
+line SDM and all the proposed diversiﬁcation models in Sec-
+tion 3, SCS, SCSF, PM-2 and PM-2M, with the three biases,
+Crowd (CRD), Balance (BAL) and Outlier (OTL). The in-
+terpolation parameter λ ∈ {0.0, ..., 1.0} is tuned in 0.1 steps
+separately for each model and bias on our training split.
+The results are presented with ﬁxed parameters K and λ on
+test split 2, and the evaluation is performed with the TREC
+2008 Blog Track judgments at rank 20. α-NDCG, ERR-IA,
+and NRBP require parameters, which are set to α = 0.5 and
+β = 0.5.
+
+Straight-Bias Experiments
+
+4.3.1
+Our primary aim in the experiments is to evaluate sen-
+timent diversiﬁcation performance. Sentiment classiﬁcation
+is an important part of the system since both the to-be-
+diversiﬁed documents need to be tagged with sentiments,
+as well as those for the topic sentiment distribution esti-
+mation. Since a ‘full evaluation’ of sentiment diversiﬁca-
+tion techniques on a publicly available dataset has not been
+done yet in prior work, it is important to understand how
+sentiment classiﬁcation quality aﬀects diversiﬁcation per-
+formance. Therefore, we start with a “perfect system” in
+which classiﬁcation accuracy is 100% for judged documents.
+For unjudged documents the trained sentiment classiﬁer de-
+scribed in Section 4.1 is applied. We then gradually reduce
+the overall classiﬁcation performance in 10% steps until 40%
+as follows: given the top K = 50 retrieved documents for a
+query, before diversiﬁcation we randomly sample the ranks
+at which the true classiﬁcation label is switched to another
+label randomly to achieve the desired classiﬁcation error for
+each query.
+
+Figure 2 shows the results for the straight-bias experi-
+ment, in which the topic sentiment distribution employed in
+experiment and evaluation underlies the same favored bias.
+For instance, the left-most column in Figure 2 shows the re-
+sults for diversifying towards Crowd in the experiments, and
+measuring performance for Crowd in the evaluation (short-
+CRD-CRD). The middle column shows the same for Bal-
+ance (short: BAL-BAL), and the right-most column is for
+the Outlier bias (short: OTL-OTL).
+
+At the top-most row in the Precision-IA@20 graphs we ob-
+serve a big gap between the SDM baseline and SCS model
+versus the rest of the models. For Crowd, the SCSF model
+only dominates when classiﬁcation accuracy is at least 60%
+while it achieves the best (however not statistically signif-
+icant) numbers in the Outlier graph. PM-2M and PM-2
+also perform well and dominate some of the lower accuracy
+ranges. Statistical signiﬁcance with the paired two-sided t-
+test (p-value< 0.05) is indicated in the graphs with circles:
+
+598Figure 2: Straight-Bias Experiment over test split varying sentiment classiﬁer accuracies on the x-axis and each one measure and bias
+on the y-axis. The leftmost column is for the Crowd bias (CRD), the middle one for Balance (BAL), and the rightmost one for Outlier
+(OTL). Dark purple dotted circled points indicate statistical signiﬁcance over the SDM baseline with p-value < 0.05 using the paired
+two-sided t-test, whereas light blue circled points indicate the same over the SCS and SDM models.
+
+ 0.305 0.31 0.315 0.32 0.325 0.33 0.335 0.34 0.345 0.35 40 50 60 70 80 90 100PrecisionIA@20, CRDsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.205 0.21 0.215 0.22 0.225 0.23 0.235 40 50 60 70 80 90 100PrecisionIA@20, BALsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.11 0.12 0.13 0.14 0.15 0.16 0.17 0.18 0.19 40 50 60 70 80 90 100PrecisionIA@20, OTLsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.68 0.7 0.72 0.74 0.76 0.78 0.8 0.82 0.84 0.86 40 50 60 70 80 90 100s-recall@20, CRDsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.76 0.77 0.78 0.79 0.8 0.81 0.82 0.83 0.84 0.85 0.86 40 50 60 70 80 90 100s-recall@20, BALsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.76 0.77 0.78 0.79 0.8 0.81 0.82 0.83 0.84 0.85 0.86 40 50 60 70 80 90 100s-recall@20, OTLsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.59 0.6 0.61 0.62 0.63 0.64 0.65 0.66 0.67 0.68 40 50 60 70 80 90 100alpha-NDCG@20, CRDsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.42 0.44 0.46 0.48 0.5 0.52 0.54 0.56 40 50 60 70 80 90 100alpha-NDCG@20, BALsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.25 0.3 0.35 0.4 0.45 0.5 0.55 40 50 60 70 80 90 100alpha-NDCG@20, OTLsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.5 0.51 0.52 0.53 0.54 0.55 0.56 0.57 0.58 0.59 40 50 60 70 80 90 100ERR@20, CRDsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.34 0.35 0.36 0.37 0.38 0.39 0.4 0.41 0.42 0.43 0.44 40 50 60 70 80 90 100ERR@20, BALsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.2 0.25 0.3 0.35 0.4 0.45 0.5 40 50 60 70 80 90 100ERR@20, OTLsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.43 0.44 0.45 0.46 0.47 0.48 0.49 0.5 0.51 0.52 40 50 60 70 80 90 100NRBP@20, CRDsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.28 0.29 0.3 0.31 0.32 0.33 0.34 0.35 0.36 40 50 60 70 80 90 100NRBP@20, BALsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.15 0.2 0.25 0.3 0.35 0.4 40 50 60 70 80 90 100NRBP@20, OTLsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.8 0.81 0.82 40 50 60 70 80 90 100CPR@20, CRDsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.66 0.68 0.7 0.72 0.74 0.76 0.78 0.8 40 50 60 70 80 90 100CPR@20, BALsentiment classifier accuracySDMSCSSCSFPM-2PM-2M 0.5 0.52 0.54 0.56 0.58 0.6 0.62 0.64 0.66 40 50 60 70 80 90 100CPR@20, OTLsentiment classifier accuracySDMSCSSCSFPM-2PM-2M599Measure
+Exp-Eval
+SDM baseline
+SCS
+SCSF
+PM-2
+PM-2M
+
+Precision-IA@20
+
+α-NDCG@20
+
+ERR-IA@20
+
+NRBP
+
+CPR@20
+
+BAL-CRD
+
+CRD-CRD
+
+BAL-CRD
+
+CRD-CRD
+
+BAL-CRD
+
+CRD-CRD
+
+BAL-CRD
+
+CRD-CRD
+
+BAL-CRD
+
+CRD-CRD
+
+0.312
+0.308
+0.298
+0.302
+0.298
+
+0.312
+0.309
+0.348
+0.341
+0.341
+
+0.593
+0.642
+0.648
+0.642
+0.639
+
+0.593
+0.650
+0.647
+0.674
+0.674
+
+0.501
+0.532
+0.533
+0.526
+0.521
+
+0.501
+0.543
+0.545
+0.570
+0.570
+
+0.440
+0.453
+0.456
+0.446
+0.440
+
+0.440
+0.471
+0.477
+0.504
+0.504
+
+0.731
+0.750
+0.774
+0.772
+0.767
+
+0.731
+0.755
+0.801
+0.813
+0.813
+
+Table 1: Cross-Bias Experiment over test split with perfect sentiment classiﬁer to compare performance loss when diversifying
+equally (BAL-CRD) if actually diversiﬁcation for the Crowd bias is desired (CRD-CRD). Bold entries in CRD-CRD columns
+are statistically signiﬁcant over corresponding entries in BAL-CRD with p-value < 0.004 using the paired two-sided t-test.
+
+the lighter blue circles refer to the result being signiﬁcant
+over the SCS and SDM models, whereas the darker dotted
+circles indicate signiﬁcance over the SDM model only.
+In
+the Precision-IA@20 graphs the results for SCSF and the
+proportionality-based methods are signiﬁcant over SCS and
+SDM even for lower accuracies. We conclude that if preci-
+sion is important, the SCSF diversiﬁcation model should be
+used.
+
+Among the s-recall@20 graphs the one for Crowd is the
+most arbitrary one. Performance drops well below the base-
+line for the SCSF and proportionality-based methods with
+medium quality classiﬁcation: this indicates that the major-
+ity sentiment(s) are being emphasized too strongly, whereas
+minority sentiments appear much later in the ranked list for
+the ﬁrst time, which is when the subtopic-recall measure is
+aﬀected. This is expected, since we explicitly diversify in
+favor of majority sentiments.
+In the Balance and Outlier
+graphs for s-recall@20 there is no such trend, however pre-
+cision is not as high for those biases as it is for Crowd. This
+is a typical precision versus recall tradeoﬀ observation.
+
+The next row shows results for α-NDCG@20, followed by
+ERR-IA@20 and NRBP: we note that the trends in these
+graphs look very similar, although the ranges of the val-
+ues diﬀer greatly. It is interesting to observe that the peak
+performance for the proportionality-based methods for the
+Crowd bias is not at 100% classiﬁcation accuracy, but at
+90%. What these three measures have in common is pun-
+ishing redundancy based on the rank and sentiment crite-
+rion in addition to non-relevance. Since usually there are
+many documents with the majority sentiment in the re-
+trieved list to start with, a strong emphasis on a single
+sentiment criterion results in more redundancy. With the
+10% error in classiﬁcation documents with other sentiments
+are slightly boosted, yielding better overall varied ranking.
+In the Balance and Outlier graphs this trend cannot be ob-
+served, since the Balance bias does not strongly emphasize
+a single sentiment criterion to begin with. Concerning the
+Outlier bias, there are fewer documents with minority sen-
+timents in the retrieved list to cause the same ‘clustered’
+ranking eﬀect as for Crowd. Summarizing the trends across
+the α-NDCG@20, ERR-IA@20, and NRBP graphs we make
+the following conclusion: if ranking is important, the PM-2
+and PM-2M methods should be chosen.
+
+Finally, we look at the last row of graphs with the CPR@20
+results: this measure evaluates how proportional the overall
+list is with respect to the chosen bias. PM-2 and PM-2M
+achieve the best results, which is closely followed by SCSF.
+PM-2 and SCSF are more appropriate for lower classiﬁca-
+tion accuracies (≤ 70%), whereas PM-2M performs slightly
+better with better classiﬁcation quality.
+
+Looking at the ﬁxed values of the interpolation parameter
+λ during training for this experiment, the following insights
+
+can be drawn: for the SCS model, across all classiﬁer accu-
+racies and biases generally λ ≥ 0.6 values are preferred. So
+this model performs best with a weaker emphasis on diver-
+sity, which pulls it closer to the SDM baseline as observed
+in the graphs of Figure 2. SCSF on the other hand has a
+good mixture of higher and lower λ values across classiﬁer
+accuracies and biases, with many of them being < 0.5, par-
+ticularly when the classiﬁer is more accurate. So a heavier
+emphasis on the diversiﬁcation part helps this model. The
+distinguishing feature between SCS and SCSF is the con-
+sideration of sentiment frequencies in addition to sentiment
+strength contributions. When the classiﬁer is noisy however
+(< 60%) and thus sentiment frequency counts are not accu-
+rate, SCSF also beneﬁts from higher λ values. In the PM-2
+and PM-2M models the role of λ is diﬀerent:
+it balances
+the emphasis on the chosen aspect σ∗ versus all the other
+aspects σ ∈ sent(T ), σ (cid:54)= σ∗. Here, consistently higher λ
+values are preferred for both models, i.e., a high emphasis
+on the chosen aspect and a minimal weight on the other ones
+seems most beneﬁcial. The eﬀectiveness of these two models
+solely relies on sentiment estimations: given our adaption of
+PM-2 from its original deﬁnition ([9]) to sentiment diversity,
+the retrieval scores are not used for building the diversiﬁed
+list.
+
+4.3.2 Cross-Bias Experiments
+Consider the following real-world setting: for certain top-
+ics, it may not be feasible to collect data for calculating
+Topic Sentiment estimations, or suitable corpora may cur-
+rently not be available. This could happen if the topic is
+very new and the data is not substantial enough for draw-
+ing general conclusions. If judgments shall be obtained, the
+data tagging eﬀort may also be a burden. In such a situation
+we can fall back to the Balance bias or equal diversiﬁcation
+approach [9, 25, 26, 27]. Naturally, the next question to
+answer is how much performance is lost when diversifying
+with Balance instead of the desired bias such as Outlier.
+The cross-bias experiments in this section investigate this
+case, and enable us to draw conclusions about the value of
+collecting and using information about topic sentiment dis-
+tributions for controversial topics.
+
+We analyze two cases. The ﬁrst, presented in Table 1
+shows the results for equally diversifying for Balance, but
+performance is measured for the Crowd bias (BAL-CRD).
+This is contrasted with diversifying for the Crowd bias, and
+evaluating for the same (CRD-CRD). Bold entries in CRD-
+CRD indicate statistical signiﬁcance over BAL-CRD with a
+p-value of < 0.004 (t-test, as before). The SDM baseline is
+included for comparison. We omit s-recall@20 due to space
+limitations. All CRD-CRD results for the proportionality-
+based methods are signiﬁcant over BAL-CRD results, whereas
+for the SCSF and SCS models there are a few exceptions.
+
+600Measure
+Exp-Eval
+SDM baseline
+SCS
+SCSF
+PM-2
+PM-2M
+
+Precision-IA@20
+OTL-OTL
+BAL-OTL
+
+0.120
+0.126
+0.164
+0.166
+0.166
+
+0.120
+0.126
+0.188
+0.184
+0.184
+
+α-NDCG@20
+
+ERR-IA@20
+
+NRBP
+
+CPR@20
+
+BAL-OTL
+
+OTL-OTL
+
+BAL-OTL
+
+OTL-OTL
+
+BAL-OTL
+
+OTL-OTL
+
+BAL-OTL
+
+OTL-OTL
+
+0.277
+0.413
+0.433
+0.447
+0.446
+
+0.277
+0.436
+0.462
+0.540
+0.540
+
+0.202
+0.309
+0.320
+0.337
+0.336
+
+0.202
+0.338
+0.358
+0.465
+0.465
+
+0.155
+0.237
+0.243
+0.262
+0.261
+
+0.155
+0.268
+0.287
+0.388
+0.388
+
+0.501
+0.562
+0.624
+0.632
+0.634
+
+0.501
+0.567
+0.632
+0.651
+0.651
+
+Table 2: Cross-Bias Experiment over test split with perfect sentiment classiﬁer to compare performance loss when diversifying
+equally (BAL-OTL) if actually diversiﬁcation for the Outlier bias is desired (OTL-OTL). Bold entries in OTL-OTL columns
+are statistically signiﬁcant over corresponding entries in BAL-OTL with p-value < 0.05 using the paired two-sided t-test.
+
+Rank
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+Rank
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+SDM baseline
+
+Excerpt
+The Religious Policeman: Mutt the Muttawa
+Happy Feminist: PROTESTING GENDER...
+Between tradition and demands for change
+Saudi mobile carriers ban SMS voting...
+Saudi Arabia, Ever Our Friends And Allies
+Orientalism and Islamophobia
+Laws discriminate against women...
+...who urged SA to improve women’s rights...
+Being a Child in Saudi Arabia
+Depressing Post: ...woman ﬁled a case against...
+
+SCS
+
+Sent.
+
+-
+o
+o
+-
+-
+o
+-
+o
+o
+-
+
+Excerpt
+The Religious Policeman: Mutt the Muttawa
+Happy Feminist: PROTESTING GENDER...
+First women to win in Saudi elections
+Between tradition and demands for change
+Saudi mobile carriers ban SMS voting...
+Saudi Arabia, Ever Our Friends And Allies
+Orientalism and Islamophobia
+Laws discriminate against women...
+...who urged SA to improve women’s rights...
+Being a Child in Saudi Arabia
+
+SCSF
+
+PM-2
+
+Excerpt
+The Religious Policeman: Mutt the Muttawa
+Happy Feminist: PROTESTING GENDER...
+Saudi Arabia, Ever Our Friends And Allies
+Orientalism and Islamophobia
+First women to win in Saudi elections
+Laws discriminate against women...
+Depressing Post: ...woman ﬁled a case against...
+Their shabby treatment of women...
+Oprah is being smuggled into Saudi Arabia...
+Between tradition and demands for change
+
+Sent.
+
+-
+o
+-
+o
++
+-
+-
+-
+-
+o
+
+Excerpt
+The Religious Policeman: Mutt the Muttawa
+Saudi Arabia, Ever Our Friends And Allies
+First women to win in Saudi elections
+Happy Feminist: PROTESTING GENDER...
+Orientalism and Islamophobia
+Laws discriminate against women...
+Depressing Post: ...woman ﬁled a case against...
+Their shabby treatment of women...
+Thumbs up for the Saudi ladies.
+Between tradition and demands for change
+
+Sent.
+
+-
+o
++
+o
+-
+-
+o
+-
+o
+o
+
+Sent.
+
+-
+-
++
+o
+o
+-
+-
+-
++
+o
+
+Table 3: Crowd Bias: Top 10 results with 4 models for query number 1007, ‘women in Saudi Arabia.’ - denotes a negative
+document, o refers to mixed/neutral, and + to positive.
+
+We observe a maximum loss of 16.92% for Precision-IA@20
+with SCSF, and an average loss of 6.48% across all measures
+and diversiﬁcation approaches.
+
+The second case is presented in Table 2: we observe the
+results for equally diversifying for Balance, but performance
+is measured for the Outlier bias (BAL-OTL). This is con-
+trasted with diversifying for the Outlier bias, and evaluat-
+ing for the same (OTL-OTL). Similar to Table 1 the results
+are statistically signiﬁcant for OTL-OTL over BAL-OTL,
+but the losses with equal diversiﬁcation are more heavily
+pronounced here: there is a maximum loss of 48.79% for
+NRBP with PM-2M, and an average loss of 16.23% across all
+measures and diversiﬁcation approaches. So for highlighting
+minority sentiments through diversiﬁcation it is even more
+important to collect biased data about topic sentiment dis-
+tributions than it is for emphasizing majority sentiments as
+observed in Table 1. This way diversiﬁcation can be per-
+formed with the intended bias rather than with equal diver-
+siﬁcation, which yields signiﬁcantly worse results.
+
+We presented the cross-bias experiments with perfect sen-
+timent classiﬁcation to reveal the maximum performance
+loss. As classiﬁcation accuracy degrades, the losses become
+smaller but remain noticeable.
+
+4.3.3 Analysis with Speciﬁc Queries
+To see the models in action, we look at the output for
+one query in Table 3, number 1007 from the TREC Blog
+Track: ‘women in Saudi Arabia’, asking for opinions about
+the treatment of women in Saudi Arabia. We show titles
+
+or characteristic excerpts from the documents together with
+their overall sentiment. The topic of this query has the fol-
+lowing Topic Sentiment: 67% negative, 17% mixed/neutral,
+and 16% positive. Here we diversify for the Crowd Bias, so
+the aim is to mirror this distribution in the results. The top
+10 retrieved results with the SDM baseline are presented at
+the top left: this result list does not include any positive doc-
+uments, and an equal amount of negative and mixed/neutral
+documents, which is clearly unsatisfactory for a Crowd bias
+representation of the results. The SCS model includes one
+positive document at rank 3, since lower ranked documents
+through the SDM baseline can be pulled up by the diversiﬁ-
+cation models. Although the documents are nicely shuﬄed
+around across ranks, the ratio of the sentiments is still not
+close to the Topic Sentiment. The SCSF model is able to cor-
+rect this, explicitly considering the frequency of documents
+with their dominant sentiments: we have 6 negative docu-
+ments, 3 mixed/neutral, and 1 positive. But 4 negative doc-
+uments are clustered right after each other, which slightly af-
+fects measures such as α-NDCG@10. The PM-2 results (bot-
+tom right) use the overall proportionality of the sentiments
+in the list as a guidance for choosing further documents:
+here, a second positive document is pulled up from lower
+ranks, yielding the best CPR@10 score among the 4 mod-
+els for this query at a cost of slightly lower Precision-IA@10
+than SCSF. With 5 negative documents, 3 mixed/neutral
+ones, and 2 positive documents we are very close to the de-
+sired distribution of sentiments.
+
+6015. CONCLUSIONS & FUTURE WORK
+
+In this paper we demonstrate how to diversify search re-
+sults according to sentiments by considering a pre-deﬁned
+bias. This allows us to emphasize either majority or minor-
+ity sentiments during diversiﬁcation, or to give an unbiased
+representation across all sentiment aspects. For this, we in-
+troduce several diversiﬁcation models that use sentiments
+and topic sentiment distributions. Diversifying the output
+of a strong retrieval baseline, the results on the TREC Blog
+Track data reveal that the proportionality-based methods
+and the SCSF model perform best according to most mea-
+sures, but an individual choice should be made based on
+the quality of the sentiment classiﬁer at hand. Finally, we
+demonstrate the value of using biases and collecting topic
+sentiment distribution estimations by means of cross-bias
+experiments in which equal diversiﬁcation is performed in-
+stead of the desired bias.
+
+The ideas presented in this paper are not only valuable
+for sentiment diversity, but can also be applied to topical
+diversity with modiﬁcations. To what extent does it make
+sense to consider biases for topical diversity? For instance,
+with an Outlier bias-like approach underrepresented query
+aspects could be highlighted in search results. Further, we
+have proposed diﬀerent extensions to existing diversiﬁcation
+models such as xQuAD and PM-2 with the SCSF and PM-
+2M models, which may be eﬀective for topical diversity as
+well.
+
+There are many directions for future work: (1) Exploring
+other biases applicable for sentiment diversity; (2) We found
+that our trained 3-class sentiment classiﬁer and ready-to-use
+classiﬁers on the web perform rather poorly at document-
+level sentiment classiﬁcation. State-of-the-art sentiment clas-
+siﬁcation works better on sentences or short text, but inter-
+preting the overall sentiment of a document is more diﬃ-
+cult, particularly on the web. Therefore, advances in this
+area would greatly beneﬁt sentiment diversiﬁcation so that
+it can be applied to the web beyond the TREC Blog Track;
+(3) In case this is diﬃcult to realize, how can the diversiﬁ-
+cation models be adapted to yield higher gains with noisy
+classiﬁcation input; (3) Analyzing opinion or topical argu-
+ments and sentiments together with biases. One question to
+solve is what kind of biases could be deﬁned to capture both,
+and whether more ﬁne-grained topic-speciﬁc biases would be
+required.
+6. ACKNOWLEDGMENTS
+
+This work was supported in part by the Center for Intelli-
+gent Information Retrieval, in part under subcontract #19-
+000208 from SRI International, prime contractor to DARPA
+contract #HR0011-12-C-0016, and in part by NSF grant
+#IIS-11217281. Any opinions, ﬁndings and conclusions or
+recommendations expressed in this material are those of the
+authors and do not necessarily reﬂect those of the sponsor.
+7. REFERENCES
+
+[1] R. Agrawal, S. Gollapudi, A. Halverson, and S. Ieong.
+Diversifying search results. In Proc. of WSDM, 2009.
+
+[2] A. Ashkan and C. L. Clarke. On the informativeness of cascade
+
+and intent-aware eﬀectiveness measures. In Proc. of WWW,
+2011.
+
+[3] J. Carbonell and J. Goldstein. The use of mmr, diversity-based
+reranking for reordering documents and producing summaries.
+In Proc. of SIGIR, 1998.
+
+[4] H. Chen and D. R. Karger. Less is more: probabilistic models
+
+for retrieving fewer relevant documents. In Proc. of SIGIR,
+2006.
+
+[5] S. F. Chen and J. Goodman. An Empirical Study of Smoothing
+
+Techniques for Language Modeling. In Proc. of ACL, 1996.
+
+[6] C. L. Clarke, M. Kolla, G. V. Cormack, O. Vechtomova,
+A. Ashkan, S. B¨uttcher, and I. MacKinnon. Novelty and
+diversity in information retrieval evaluation. In Proc. of
+SIGIR, 2008.
+
+[7] C. L. Clarke, M. Kolla, and O. Vechtomova. An eﬀectiveness
+
+measure for ambiguous and underspeciﬁed queries. In Proc. of
+ICTIR, 2009.
+
+[8] C. L. A. Clarke, N. Craswell, and I. Soboroﬀ. Overview of the
+
+TREC 2009 Web Track. In Proc. of TREC-2009, 2009.
+
+[9] V. Dang and W. B. Croft. Diversity by proportionality: an
+election-based approach to search result diversiﬁcation. In
+Proc. of SIGIR, 2012.
+
+[10] G. Demartini. Ares: a retrieval engine based on sentiments
+
+sentiment-based search result annotation and diversiﬁcation. In
+Proc. of ECIR, 2011.
+
+[11] G. Demartini and S. Siersdorfer. Dear search engine: what’s
+
+your opinion about...?: sentiment analysis for semantic
+enrichment of web search results. In Proc. of SEMSEARCH,
+2010.
+
+[12] A. Esuli and F. Sebastiani. Sentiwordnet: A publicly available
+
+lexical resource for opinion mining. In In Proc. of LREC,
+pages 417–422, 2006.
+
+[13] R.-E. Fan, K.-W. Chang, C.-J. Hsieh, X.-R. Wang, and C.-J.
+
+Lin. LIBLINEAR: A library for large linear classiﬁcation.
+Journal of Machine Learning Research, 9:1871–1874, 2008.
+
+[14] B. He, C. Macdonald, and I. Ounis. Ranking opinionated blog
+
+posts using opinionﬁnder. In Proc. of SIGIR, 2008.
+
+[15] J. He, V. Hollink, and A. de Vries. Combining implicit and
+
+explicit topic representations for result diversiﬁcation. In Proc.
+of SIGIR, 2012.
+
+[16] X. Huang and W. B. Croft. A uniﬁed relevance model for
+
+opinion retrieval. In Proc. of CIKM, 2009.
+
+[17] M. Kacimi and J. Gamper. Diversifying search results of
+
+controversial queries. In Proc. of CIKM, 2011.
+
+[18] M. Kacimi and J. Gamper. Mouna: mining opinions to unveil
+
+neglected arguments. In Proc. of CIKM, 2012.
+
+[19] M. Keikha, F. Crestani, and W. B. Croft. Diversity in blog
+
+feed retrieval. In Proc. of CIKM, 2012.
+
+[20] Y. Lee, S.-H. Na, J. Kim, S.-H. Nam, H.-Y. Jung, and J.-H.
+
+Lee. Kle at trec 2008 blog track: Blog post and feed retrieval.
+In E. M. Voorhees and L. P. Buckland, editors, Proc. of
+TREC, Gaithersburg, Maryland, USA, November 18-21,
+2008, volume Special Publication 500-277. National Institute
+of Standards and Technology (NIST), 2008.
+
+[21] D. Metzler and W. B. Croft. A markov random ﬁeld model for
+
+term dependencies. In Proc. of SIGIR, 2005.
+
+[22] S.-H. Nam, S.-H. Na, Y. Lee, and J.-H. Lee. Diﬀpost: Filtering
+
+non-relevant content based on content diﬀerence between two
+consecutive blog posts. In Proc. of ECIR, 2009.
+
+[23] Ounis, M. de Rijke, C. Macdonald, G. Mishne, and Soboroﬀ.
+Overview of the TREC-2006 Blog Track. In Proc. of TREC,
+2006.
+
+[24] T. Sakai and H. Joho. Overview of ntcir-9, 2011.
+[25] R. L. Santos, C. Macdonald, and I. Ounis. Exploiting query
+
+reformulations for web search result diversiﬁcation. In Proc. of
+WWW, 2010.
+
+[26] R. L. Santos, C. Macdonald, and I. Ounis. Selectively
+
+diversifying web search results. In Proc. of CIKM, 2010.
+
+[27] R. L. Santos, C. Macdonald, and I. Ounis. Intent-aware search
+
+result diversiﬁcation. In Proc. of SIGIR, 2011.
+
+[28] R. L. T. Santos, C. Macdonald, R. McCreadie, I. Ounis, and
+I. Soboroﬀ. Information retrieval on the blogosphere. Found.
+Trends Inf. Retr., 6(1), Jan. 2012.
+
+[29] D. Vallet and P. Castells. Personalized diversiﬁcation of search
+
+results. In Proc. of SIGIR, 2012.
+
+[30] J. Wang and J. Zhu. Portfolio theory of information retrieval.
+
+In Proc. of SIGIR, 2009.
+
+[31] C. X. Zhai, W. W. Cohen, and J. Laﬀerty. Beyond independent
+
+relevance: methods and evaluation metrics for subtopic
+retrieval. In Proc. of SIGIR, 2003.
+
+[32] W. Zhang, L. Jia, C. Yu, and W. Meng. Improve the
+
+eﬀectiveness of the opinion retrieval and opinion polarity
+classiﬁcation. In Proc. of CIKM, 2008.
+
+[33] W. Zhang, C. Yu, and W. Meng. Opinion retrieval from blogs.
+
+In Proc. of CIKM, 2007.
+
+602

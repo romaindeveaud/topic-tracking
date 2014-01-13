@@ -1,0 +1,743 @@
+Query Change as Relevance Feedback in Session Search
+
+Sicong Zhang, Dongyi Guan, Hui Yang
+
+Department of Computer Science
+
+37th and O Street, NW, Washington, DC 20057 USA
+
+Georgetown University
+
+{sz303, dg372}@georgetown.edu, huiyang@cs.georgetown.edu
+
+ABSTRACT
+Session search retrieves documents for an entire session. Dur-
+ing a session, users often change queries to explore and in-
+vestigate the information needs. In this paper, we propose
+to use query change as a new form of relevance feedback for
+better session search. Evaluation conducted over the TREC
+2012 Session Track shows that query change is a highly ef-
+fective form of feedback as compared with existing relevance
+feedback methods. The proposed method outperforms the
+state-of-the-art relevance feedback methods for the TREC
+2012 Session Track by a signiﬁcant improvement of >25%.
+
+Categories and Subject Descriptors
+H.3.3 [Information Systems ]: Information Storage and
+Retrieval—Information Search and Retrieval
+
+Keywords
+Relevance Feedback; Session Search; Query Change
+
+1.
+
+INTRODUCTION
+
+Session search retrieves documents for an entire session
+of queries.
+[3, 4]. It allows the user to constantly modify
+queries in order to ﬁnd relevant documents. Session search
+involves many interactions between the search engine and
+the user. The challenge for session search is how to make
+use of these interactions and the user feedback to eﬀectively
+improve search accuracy.
+In TREC (Text REtrieval Con-
+ference) 2012 Session tracks [6], the users (NIST assessors)
+clicked retrieved documents and interacted with a search
+engine to produce the queries and sessions. For each inter-
+mediate query, a retrieved document set containing the top
+10 retrieval results ranked in decreasing relevance for the
+query are kept. The clicked data contains the documents
+clicked by users, their clicking orders, and dwell time. Fig-
+ure 1 illustrates the interactions among the user and the
+search engine.
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for proﬁt or commercial advantage and that copies bear
+this notice and the full citation on the ﬁrst page. Copyrights for components
+of this work owned by others than ACM or the author must be honored. To
+copy otherwise, or republish, to post on servers or to redistribute to lists,
+requires prior speciﬁc permission and/or a fee.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+Figure 1: Session search. (TREC 2012 session 85)
+
+Relevance feedback is a popular IR technique. By expand-
+ing queries with terms from relevant feedback documents,
+relevance feedback is able to generate better queries and
+uses them for better retrieval accuracy. Commonly used rel-
+evant feedback schemes include Rocchio with real user feed-
+back [5], pseudo relevance feedback [1],and implicit relevant
+feedback [7]. Real user feedback is obtained from human as-
+sessors that indicate the relevance of a document retrieved
+for a query. Pseudo relevance feedback, also known as blind
+relevance feedback, that assumes that the top retrieved doc-
+uments are relevant, and makes query expansion based on
+these pseudo relevant documents.
+Implicit relevance feed-
+back is the form of feedback that is inferred from user be-
+haviors, such as user clicks, clicking order, and dwell time.
+In this paper, we propose to use query change as a new
+form of relevance feedback in session search. Our method
+utilizes editing changes between two adjacent queries, and
+the relationship between query change and retrieved docu-
+ments for the earlier query to enhance session search. Our
+experiments demonstrate that the proposed approach out-
+performs other relevance feedback methods.
+
+2. DEFINING QUERY CHANGE
+We represent a search session S as a series of queries
+{q1, ..., qi, ..., qn}. For an individual query qi, we can write
+it as a combination of the common part and the changes
+between it and its previous query: qi = (qi ∩ qi−1) + ∆qi.
+
+We deﬁne query change ∆qi as the syntactic editing diﬀer-
+
+821ences between two adjacent queries qi−1 and qi. Considering
+the directions of editing, query change ∆qi can be further
+decomposed into two parts: positive ∆q and negative ∆q.
+They are written as “+∆q” and “−∆q” respectively. The
+positive ∆q are new terms that the user adds to the previ-
+ous query; that is, they appear in qi, but did not appear in
+qi−1. The negative ∆q are terms that the user deletes from
+the previous query; that is, they appeared in qi − 1, but not
+appear in qi.
+
+We thus decompose an adjacent query pair into:
+
++∆qi = qi (cid:114) qi−1
+−∆qi = qi−1 (cid:114) qi
+
+qtheme = qi (cid:114) (+∆qi) = qi−1 (cid:114) (−∆qi)
+
+where +∆qi and −∆qi represent added terms and removed
+terms respectively, qtheme is the theme terms, and the nota-
+tion of (cid:114) represents set-theoretic diﬀerence. Table 1 demon-
+strates a few example TREC 2012 Session queries and their
+query changes.
+
+The theme terms (qtheme) appear in both qi−1 and qi.
+Generally it implies a strong preference for those terms from
+the user. For example, in Table 1 session 32, q1 = “bollywood
+legislation”, q2 = “bollywood law”. qtheme = “bollywood”.
+
+The added terms (+∆q) may indicate a speciﬁcation or
+drifting between qi−1 and qi. In session 32, (+∆q2) = “law”.
+The removed terms (−∆q) may indicate a generalization
+or a drifting. In session 32, (−∆q2) = “legislation”.
+
+3. UTILIZING QUERY CHANGE
+Besides queries, a TREC session also contains retrieved
+document sets D (set of Di) for each query qi, and clicked
+information C (set of Ci) for each query qi.
+
+Based on observation of session search and user inten-
+sion, we propose an important assumption that the previous
+search result Di−1 inﬂuences the current query change ∆qi:
+
+∆qi ← Di−1.
+
+In fact, this inﬂuence can be in quite a complex way. Figure
+1 shows session 85 as an example, illustrating how the previ-
+ous retrieved documents Di−1 inﬂuence the query changes.
+Based on our deﬁnition of query change, we utilize dif-
+ferent cases of query change in the calculation of relevance
+score between the current query qi and a document d.
+Suppose P (t|d) is the original term weight for the re-
+trieve model in our utilization, we increase and decrease
+term weights on top of it. In the following formulas, P (t|d)
+is calculated by the multinomial query generation language
+model with Dirichlet smoothing [9] while P (t|d) is calculated
+based on Maximum-Likelihood Estimation (MLE):
+
+P (t|d) =
+
+T F (t, d) + µP (t|C)
+
+Length(d) + µ
+
+,
+
+where d is the document under evaluation, Length(d) is the
+length of the document, T F (t, d) is the term frequency of t in
+document d, P (t|C) calculates the probability that t appears
+in corpus C based on MLE. µ is set to 5000 in experiments.
+We adjust the term weights for the three types of query
+changes as the following:
+• Theme terms are the repeated common parts nearly ap-
+pearing in the entire session. It implies their importance
+
+Table 1: Examples of TREC 2012 Session queries.
+
+Session 32
+
+Session 85
+
+Queries
+
+query 1 = bollywood legislation
+query 2 = bollywood law
+query 1 = glass blowing
+query 2 = glass blowing science
+query 3 = scientiﬁc glass blowing +∆q3 = scientif ic
+
+Query Change
++∆q2 = law
+−∆q2 = legislation
++∆q2 = science
+−∆q2 = Φ
+−∆q3 = science
+
+to the session and to the user. We therefore propose
+to increase their term weights.
+It is worth noting that
+theme terms are common terms within a session which
+show a similar eﬀect of stop words. However, they may
+not be common terms in the entire corpus. We propose
+to use a measure that is similar to inverse document fre-
+quency (idf ) to capture this characteristic. We employ
+the negation of the number of occurrences of t in Di−1,
+1 − P (t|Di−1). The weight increase for a theme term
+t ∈ qtheme is formulated as follows:
+
+WT heme =
+
+[1 − P (t|Di−1)] log P (t|d)
+
+(1)
+
+(cid:88)
+
+t∈qtheme
+
+• For the added terms that occurred in the previous search
+result Di−1, which are terms t ∈ +∆q and t ∈ Di−1, we
+deduct their term weights. This is because the term ap-
+pear both in documents for previous query and in the cur-
+rent query, it will bring back repeated information from
+the previous query to the current query in some degree.
+In addition, t ∈ +∆q shows these added terms are not
+theme terms. Therefore, it has a high probability to de-
+viate from the recent focus of the current query. We thus
+deduct more weights to reduce redundant information.
+The weight deduction is proportional to t’s term frequency
+in Di−1.
+
+−WAdd,In = − (cid:88)
+
+t∈+∆q
+t∈Di−1
+
+P (t|Di−1) log P (t|d)
+
+(2)
+
+• For the added terms that did not occur in the search re-
+sult of previous query Di−1, which are terms t ∈ +∆q
+and t /∈ Di−1, we increase the term weights because they
+demonstrate the novel interests of the user for the current
+query qi. We propose to raise the term weights based on
+inverse document frequency in order not to increase their
+weights too much if they are common terms in the corpus.
+
+WAdd,Out =
+
+idf (t) log P (t|d)
+
+(3)
+
+(cid:88)
+
+t∈+∆q
+t /∈Di−1
+
+• For the terms that are from the previous query, which
+are terms t ∈ −∆q. No matter t ∈ Di−1 or t /∈ Di−1,
+we should deduct their term weights. The reason is the
+following. If they appeared in Di−1, it means that the user
+observed them and disliked them. If they did not appear
+in Di−1, the user still dislikes the terms since they are
+not included in qi anyway. Just like terms that in added
+terms that appeared in previously retrieved documents
+(t ∈ +∆q and t ∈ Di−1), we deduct the term weight for
+the removed terms according to the following formula.
+
+−WRemove = − (cid:88)
+
+t∈−∆q
+
+P (t|Di−1) log P (t|d)
+
+(4)
+
+822Table 2: Dataset statistics for TREC 2012 Session Track.
+
+#topic =48
+#query/session =3.03 #query = 297
+#session =98 #session/topic =2.04 #docs =17,861
+
+Table 3: nDCG@10, MAP, and their improvements over the
+baseline (%chg) for TREC 2012. A statistical signiﬁcant
+improvement on nDCG@10 over the baseline is indicated
+with a † at p < 0.05.
+
+Lemur
+PRF
+
+RF Di−1
+
+Implicit Click
+Implicit SAT
+
+QueryChg CLK
+QueryChg SAT
+
+nDCG@10
+
+0.2622
+0.2718
+0.2122
+0.2668
+0.2655
+0.3306
+0.3300
+
+%chg
+0.00%
+3.66%
+-19.07%
+1.75%
+1.26%
+26.09%†
+25.86%†
+
+MAP
+0.1342
+0.1309
+0.1137
+0.1355
+0.1335
+0.1533
+0.1535
+
+%chg
+0.00%
+-2.46%
+-15.28%
+0.97%
+-0.52%
+14.23%
+14.38%
+
+By considering all cases above, the relevance score be-
+tween the current query qi and a document d can be rep-
+resented as a linear combination of various term weight ad-
+justments:
+
+Score(qi, d) = log P (qi|d)+
++ αWT heme − βWAdd,In + WAdd,Out − δWRemove
+
+(5)
+
+where d is the document under evaluation, log P (qi|d) is the
+original query-document relevance scoring function in log
+form, α, β, , and δ are coeﬃcients for each type of query
+changes. Empirically, we set the coeﬃcients as α = 2.2,
+β = 1.8,  = 0.07, and δ = 0.4.
+
+4. EXPERIMENTS
+4.1 Search Accuracy Using the Last Query
+
+We evaluate our algorithm on the TREC 2012 Session
+Track [6]. According to how much prior information is used,
+the Track is divided into four phases: RL1 (using only the
+last query), RL2 (using all queries in the session), RL3 (us-
+ing all session queries and ranked lists of URLs and the cor-
+responding web pages), RL4 (using all session queries, the
+ranked lists of URLs and the corresponding web pages, the
+clicked URLs, and the time that the user spent on the cor-
+responding web pages). Table 2 shows the statistics about
+the TREC 2012 Session Track.
+
+The corpus used in our evaluation is ClueWeb09 CatB.1
+CatB consists of 50 million English pages from the Web col-
+lected during two months in 2009. We removed documents
+whose Waterloo’s “GroupX” spam raining score [2] are less
+than 70.
+
+We compare the following algorithms in this paper:
+
+• Baseline (Lemur without relevance feedback) Using the
+original Lemur system (language modeling + Dirichlet
+smoothing) to retrieve for the last query qn.
+• PRF (Pseudo Relevance Feedback). We utilize pseudo rel-
+evance feedback algorithm that developed in Lemur. We
+use the top 20 documents as pseudo relevant documents.
+The retrieval is for the last query qn.
+• RF Di−1. Rocchio using the previously retrieved top doc-
+uments proved by TREC. This method uses qn, qn−1, and
+Dn−1.
+
+1http://lemurproject.org/clueweb09/
+
+Table 4: nDCG@10, MAP, and their improvements over the
+baseline (%chg) for TREC 2012, after uniform aggregation.
+A statistical signiﬁcant improvement on nDCG@10 over the
+baseline is indicated with a † at p < 0.05.
+
+Lemur
+PRF
+
+RF Di−1
+
+Implicit Click
+Implicit SAT
+
+QueryChg CLK
+QueryChg SAT
+
+nDCG@10
+
+0.3227
+0.2986
+0.2446
+0.2916
+0.2889
+0.3258
+0.3350
+
+MAP
+%chg
+0.00%
+0.1558
+-7.46% 0.1413
+-24.20% 0.1281
+-9.64% 0.1449
+-10.47% 0.1467
+0.96% 0.1532
+3.81% 0.1534
+
+%chg
+0.00%
+-9.31%
+-17.78%
+-7.00%
+-5.84%
+-1.67%
+-1.54%
+
+• Implicit Click. Implicit relevance feedback based on clicked
+documents of the previous search query qi−1. This method
+uses qn, qn−1, Dn−1, Cn−1.
+• Implicit SAT. Implicit relevance feedback based on SAT
+[8] clicked documents (the documents that the user clicked
+and stayed on for at least 30 seconds) from the previous
+query. This method uses qn, qn−1, Dn−1, Cn−1.
+• QueryChg CLK. (Our algorithm) Relevance feedback us-
+ing query change based on Eq. 5. This method uses
+qn, qn−1, Dn−1, Cn−1. Di−1 include the clicked documents
+and all snippets for the previous query.
+• QueryChg SAT. (Our algorithm) Relevance feedback us-
+ing query change based on Eq. 5. This method uses
+qn, qn−1, Dn−1, Cn−1. Di−1 are SAT clicks and all snip-
+pets for the previous query.
+
+Table 3 shows the search accuracy for these seven runs.
+We employ the oﬃcial TREC Session evaluation metrics,
+nDCG@10 and mean average precision (MAP), for measur-
+ing search accuracy. We can see that the proposed meth-
+ods (QueryChg CLK, QueryChg SAT) improve the baseline
+by 26.09% and 25.86% respectively in nDCG@10. The im-
+provements are statistically signiﬁcant (one sided t-test, p
+=0.05). They also outperforms all other relevance feedback
+runs. Among other runs, PRF and implicit relevance feed-
+back both improve over the baseline. RF Di−1, however,
+decreases nDCG@10 by 19.07% than the baseline. This de-
+crease is expected. RF Di−1 makes query expansion based
+on Di−1, which increases the weights of old terms in Di−1.
+An ideal relevance feedback model, however, should assign
+a lower weight to these terms since they are no longer novel
+or no longer satisfying the current information need.
+4.2 Search Accuracy Using All Queries
+
+There are multiple queries in sessions search. Prior re-
+search has demonstrated that using all queries can eﬀec-
+tively improve search accuracy for session search over just
+using the last query [6]. This technique is called query aggre-
+gation. We evaluate our algorithm with query aggregation
+in this section.
+
+Let Scoresession(qn, d) denote the overall relevance score
+(cid:80)n
+for a document d to the entire session, the aggregated ses-
+sion relevance score can be written as: Scoresession(qn, d) =
+i=1 λi · Score(qi, d), where n is the number of queries in
+a session, Score(qi, d) is the relevance score between d and
+qi, and λi is the query weight for qi. In this paper, we em-
+ploy the uniform query aggregation by setting all queries are
+equally weighted (λi = 1) for all systems under evaluation.
+Table 4 shows the search accuracy with uniform aggrega-
+tion over all queries. Comparing Table 4 with Table 3, we
+
+823Intellectual
+
+Amorphous
+
+Table 5: nDCG@10 for diﬀerent classes of sessions in TREC 2012 Session Track.
+Factual
+%chg
+0.2557
+0.00%
+0.2664
+-1.02%
+-16.63% 0.2185
+0.2627
+4.81%
+0.2603
+1.55%
+0.3062
+33.03%
+31.48%
+0.3045
+
+Speciﬁc
+%chg
+0.2529
+0.00%
+2.70%
+0.2721
+-26.65% 0.1995
+0.2508
+0.10%
+0.2555
+0.34%
+0.3041
+36.73%
+37.20%
+0.3062
+
+%chg
+0.00%
+7.60%
+-21.12%
+-0.83%
+1.03%
+20.23%
+21.08%
+
+Lemur
+PRF
+RF Di−1
+Implicit Click
+Implicit SAT
+QueryChg Click
+QueryChg SAT
+
+0.2740
+0.2814
+0.2009
+0.2742
+0.2749
+0.3746
+0.3759
+
+0.2741
+0.2713
+0.2285
+0.2873
+0.2783
+0.3646
+0.3604
+
+%chg
+0.00%
+4.20%
+-14.54%
+2.74%
+1.81%
+19.77%
+19.09%
+
+Table 6: nDCG@10 for diﬀerent classes of sessions in TREC 2012 Session Track. Uniform Aggregation
+
+Lemur
+PRF
+RF Di−1
+Implicit Click
+Implicit SAT
+QueryChg Click
+QueryChg SAT
+
+Intellectual
+
+0.3656
+0.3634
+0.2703
+0.3235
+0.3235
+0.3575
+0.3818
+
+Speciﬁc
+%chg
+0.2983
+0.00%
+-0.60%
+0.2654
+-26.08% 0.2233
+-11.51% 0.2743
+-11.53% 0.2767
+0.3089
+-2.22%
+4.43%
+0.3125
+
+%chg
+0.00%
+-11.05%
+-25.15%
+-8.07%
+-7.24%
+3.55%
+4.76%
+
+Amorphous
+
+0.3539
+0.3412
+0.2719
+0.3138
+0.3045
+0.3474
+0.3637
+
+Factual
+%chg
+0.2989
+0.00%
+0.2626
+-3.58%
+-23.18% 0.2304
+-11.33% 0.2739
+-13.96% 0.2697
+0.3082
+-1.84%
+2.76%
+0.3089
+
+%chg
+0.00%
+-12.12%
+-22.92%
+-8.36%
+-9.75%
+3.11%
+3.37%
+
+observe that all systems improve their search accuracy when
+using query aggregation. The proposed QueryChg SAT run
+achieves an nDCG@10 of 0.3350, which is a 3.81% improve-
+ment over Lemur after uniform query aggregation, and a
+27.76% improvement over Lemur without query aggrega-
+tion. The Lemur run after query aggregation performs well
+(nDCG@10=0.32) as compared with without query aggre-
+gation (nDCG@10=0.26 in Table 3). However, the proposed
+query change runs (QueryChg Click, QueryChg SAT) do not
+beneﬁt much from query aggregation. This may be because
+that uniform aggregation equally weights each query, which
+assumes query independence among the queries in a session;
+whereas the query change relevance feedback runs assume
+that previous query and current query are dependent. The
+diﬀerence in the assumptions between query change rele-
+vance feedback model and the uniform aggregation may be
+the reason that the former does not beneﬁt much from the
+latter. Other aggregation methods may be able to improve
+the situation.
+4.3 Results On Different Session Types
+
+TREC 2012 sessions were created by considering two dif-
+ferent dimensions: product type and goal quality. For prod-
+uct type, a session can be classiﬁed as searching for either
+factual or intellectual target. For search goal, a session can
+be classiﬁed as either speciﬁc or amorphous.
+
+Both Table 5 and Table 6 show that the proposed method
+demonstrate diﬀerence eﬀects on diﬀerent session types. It
+achieves more improvement on Intellectual sessions (37.20%)
+and Amorphous sessions (31.48%) than on Factual sessions
+(19.09%) and Speciﬁc sessions (21.08%). This suggests that
+for more exploratory-style sessions, i.e., more diﬃcult ses-
+sions, such as Intellectual and Amorphous sessions, our method
+is able to generate more performance gain. We believe that
+our method eﬀectively captures query changes and well rep-
+resents the dynamics in a search session.
+
+5. CONCLUSION
+
+Based on the idea that query change is an important form
+of feedback, this paper presents a novel relevance feedback
+model by utilizing query change. Experiments show that our
+approach is highly eﬀective and outperforms other feedback
+models for the TREC 2012 Session Track. Moreover, the
+
+proposed relevance feedback method demonstrates diﬀerent
+eﬀects over sessions with diﬀerent types of search targets and
+goals. It achieves more improvement on the more diﬃcult
+sessions, such as Intellectual and Amorphous sessions, over
+the baseline system which does not use relevance feedback.
+We believe that our method better captures the exploratory
+nature of a search session by treating query changes as ef-
+fective user feedback.
+
+6. ACKNOWLEDGMENTS
+
+This research was supported by NSF grant CNS-1223825.
+Any opinions, ﬁndings, conclusions, or recommendations ex-
+pressed in this paper are of the authors, and do not neces-
+sarily reﬂect those of the sponsor.
+
+7. REFERENCES
+[1] G. Cao, J.-Y. Nie, J. Gao, and S. Robertson. Selecting
+good expansion terms for pseudo-relevance feedback. In
+SIGIR ’08, pages 243–250. ACM.
+
+[2] G. V. Cormack, M. D. Smucker, and C. L. Clarke.
+
+Eﬃcient and eﬀective spam ﬁltering and re-ranking for
+large web datasets. Inf. Retr., 14(5), Oct. 2011.
+[3] D. Guan, H. Yang, and N. Goharian. Eﬀective
+
+structured query formulation for session search. In
+TREC ’12.
+
+[4] J. Jiang, D. He, and S. Han. Pitt at trec 2012 session
+
+track. In TREC ’12.
+
+[5] T. Joachims. A probabilistic analysis of the Rocchio
+
+algorithm with TFIDF for text categorization. In ICML
+’97.
+
+[6] E. Kanoulas, B. Carterette, M. Hall, P. Clough, and
+
+M. Sanderson. Overview of the trec 2012 session track.
+In TREC’12.
+
+[7] Y. Song and L.-w. He. Optimal rare query suggestion
+
+with implicit user feedback. In WWW ’10.
+
+[8] D. Sontag, K. Collins-Thompson, P. N. Bennett, R. W.
+
+White, S. Dumais, and B. Billerbeck. Probabilistic
+models for personalizing web search. In WSDM ’12.
+
+[9] C. Zhai and J. Laﬀerty. A study of smoothing methods
+
+for language models applied to information retrieval.
+ACM Trans. Inf. Syst., 22(2):179–214, Apr. 2004.
+
+824

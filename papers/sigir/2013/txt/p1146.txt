@@ -1,0 +1,124 @@
+Semantic Models for Answer Re-ranking
+
+in Question Answering
+
+Department of Computer Science- University of Bari Aldo Moro
+
+Piero Molino
+
+Via Orabona 4, 70125 Bari, Italy
+
+piero.molino@uniba.it
+
+Categories and Subject Descriptors
+H.3.3 [Information Storage and Retrieval]: Information
+Search and Retrieval; I.2.7 [Artiﬁcial Intelligence]: Nat-
+ural Language Processing; I.2.6 [Artiﬁcial Intelligence]:
+Learning
+
+Keywords
+Question Answering, Learning to Rank, Semantics
+
+ABSTRACT
+The task of Question Answering (QA) is to ﬁnd correct an-
+swers to users’ questions expressed in natural language. In
+the last few years non-factoid QA received more attention.
+It focuses on causation, manner and reason questions, where
+the expected answer has the form of a passage of text. The
+presence of question and answers corpora allows the adop-
+tion of Learning to Rank (MLR) algorithms in order to out-
+put a sensible ranking of the candidate answers.
+
+The importance and eﬀectiveness of linguistically moti-
+vated features, obtained from syntax, lexical semantics and
+semantic role labelling, was shown in literature [2–4], but
+there are still several diﬀerent possible semantic features
+that have not been taken into account so far and our goal
+is to ﬁnd out if their use could lead to performance im-
+provement.
+In particular features coming from Semantic
+Models (SM) like Distributional Semantic Models (DSMs),
+Explicit Semantic Analysis (ESA), Latent Dirichlet Alloca-
+tion (LDA) induced topics have never been applied to the
+task so far. Based on the usefulness that those models show
+in other tasks, we think that SM can have a signiﬁcant role
+in improving current state-of-the-art systems’ performance
+in answer re-ranking.
+
+The questions this research wants to answer are: 1) Do
+semantic features bring information that is not present in
+the bag-of-words and syntactic features? 2) Do they bring
+diﬀerent information or does it overlap with that of other
+features? 3) Are additional semantic features useful for an-
+
+Permission to make digital or hard copies of part or all of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for proﬁt or commercial advantage and that copies
+bear this notice and the full citation on the ﬁrst page. Copyrights for third-
+party components of this work must be honored. For all other uses, contact
+the owner/author(s).
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+ACM 978-1-4503-2034-4/13/07.
+
+swer re-ranking? Does their adoption improve systems’ per-
+formance? 4) Which of them is more eﬀective and under
+which circumstances?
+
+We performed a preliminary evaluation of DSMs on the
+ResPubliQA 2010 Dataset. We built a DSM based answer
+scorer that represents the question and the answer as the
+sums of the vectors of their terms taken term-term co-occurrence
+matrix and calculates their cosine similarity. We replaced
+the term-term matrix with the ones obtained by Random
+Indexing (RI), Latent Semantic Analysis (LSA) and LSA
+over the RI. Considering each DSM on its own, the results
+prove that all the DSMs are better than the baseline (the
+standard term-term co-occurrence matrix), and the improve-
+ment is always signiﬁcant. The best improvement for the
+MRR in English is obtained by LSA (+180%), while in Ital-
+ian by LSARI (+161%). We also showed that combining
+the DSMs with overlap based measures via CombSum the
+ranking is signiﬁcantly better than the baseline obtained by
+the overlap measures alone. For English we have obtained
+an improvement in MRR of about 16% and for Italian, we
+achieve a even higher improvement in MRR of 26%. Fi-
+nally, adopting RankNet for combining the overlap features
+and the DSMs features, improves the MRR of about 13%.
+More details can be found in [1].
+
+In order to investigate the eﬀectiveness of the semantic
+features, we still need to incorporate other semantic features,
+such as ESA, LDA and other state-of-the-art linguistic fea-
+tures. Other operators for semantic compositionality, like
+product, tensor product and circular convolution, will also
+be investigated.
+
+Moreover we will experiment on diﬀerent datasets, focus-
+ing mainly on non-factoid QA. The Yahoo! Answers Man-
+ner Questions datasets are a good starting point. A new
+dataset will also be collected with questions from the users of
+Wikiedi (a QA system over Wikipedia articles, www.wikiedi.it)
+and answers in the form of paragraphs from Wikipedia pages.
+
+1. REFERENCES
+
+[1] P. Molino, P. Basile, A. Caputo, P. Lops, and G. Semeraro.
+
+Exploiting distributional semantic models in question answering.
+In ICSC, pages 146–153, 2012.
+
+[2] A. Severyn and A. Moschitti. Structural relationships for
+large-scale learning of answer re-ranking. In SIGIR, pages
+741–750, 2012.
+
+[3] M. Surdeanu, M. Ciaramita, and H. Zaragoza. Learning to rank
+
+answers to non-factoid questions from web collections.
+Computational Linguistics, 37(2):351–383, 2011.
+
+[4] S. Verberne, L. Boves, N. Oostdijk, and P.-A. Coppen. Using
+
+syntactic information for improving why-question answering. In
+COLING, pages 953–960, 2008.
+
+1146

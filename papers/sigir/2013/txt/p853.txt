@@ -1,0 +1,851 @@
+Estimating Query Representativeness for
+
+Query-Performance Prediction
+
+Mor Sondak
+
+mor@tx.technion.ac.il
+
+Anna Shtok
+
+annabel@tx.technion.ac.il
+
+Oren Kurland
+
+kurland@ie.technion.ac.il
+
+Faculty of Industrial Engineering and Management, Technion
+
+Haifa 32000, Israel
+
+ABSTRACT
+The query-performance prediction (QPP) task is estimat-
+ing retrieval eﬀectiveness with no relevance judgments. We
+present a novel probabilistic framework for QPP that gives
+rise to an important aspect that was not addressed in previ-
+ous work; namely, the extent to which the query eﬀectively
+represents the information need for retrieval. Accordingly,
+we devise a few query-representativeness measures that uti-
+lize relevance language models. Experiments show that inte-
+grating the most eﬀective measures with state-of-the-art pre-
+dictors in our framework often yields prediction quality that
+signiﬁcantly transcends that of using the predictors alone.
+Categories and Subject Descriptors: H.3.3 [Information Search
+and Retrieval]: Retrieval models
+General Terms: Algorithms, Experimentation
+
+Keywords: query-performance prediction
+
+1.
+
+INTRODUCTION
+
+The task of estimating retrieval eﬀectiveness in the ab-
+sence of relevance judgments — a.k.a. query-performance
+prediction (QPP) — has attracted much research attention
+[2]. Interestingly, an important aspect of search eﬀectiveness
+has been overlooked, or not explicitly modeled, in previously
+proposed prediction approaches; namely, the presumed ex-
+tent to which the query eﬀectively represents the underlying
+information need for retrieval.
+
+Indeed, an information need can be represented by various
+queries which in turn might represent various information
+needs. Some of these queries might be more eﬀective for
+retrieval over a given corpus than others for the information
+need at hand. Furthermore, relevance is determined with
+respect to the information need rather than with respect to
+the query. These basic observations underlie the develop-
+ment of the novel query-performance prediction framework
+that we present. A key component of the framework is the
+use of measures for the query representativeness of the in-
+formation need. We propose several such measures that are
+based on using relevance language models [8].
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for proﬁt or commercial advantage and that copies bear
+this notice and the full citation on the ﬁrst page. Copyrights for components
+of this work owned by others than ACM must be honored. Abstracting with
+credit is permitted. To copy otherwise, or republish, to post on servers or to
+redistribute to lists, requires prior speciﬁc permission and/or a fee. Request
+permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+Empirical evaluation shows that integrating the most ef-
+fective representativeness measures with state-of-the-art pre-
+dictors in our framework yields prediction quality that often
+signiﬁcantly transcends that of using these predictors alone.
+
+2. RELATED WORK
+
+Our query-performance prediction framework essentially
+generalizes a recently proposed framework [7], the basis of
+which was the estimation of the relevance of a result list
+to a query. Our framework relies on the basic deﬁnition of
+relevance with respect to the information need, and there-
+fore accounts for the connection between the query and the
+information need. This connection was not (explicitly) ad-
+dressed in previous work including [7]. For example, pre-
+retrieval predictors, which use only the query and corpus-
+based statistics, are mostly based on estimating the discrim-
+inative power of the query with respect to the corpus, but
+do not account for the query-information need connection.
+Post-retrieval predictors analyze also the result list of top-
+retrieved documents [2]. Our framework provides formal
+grounds to integrating pre-retrieval, post-retrieval, and query-
+representativeness, which turn out to be three complemen-
+tary aspects of the prediction task. Furthermore, we demon-
+strate the merits of integrating post-retrieval predictors with
+query representativeness measures in the framework.
+
+The query representativeness measures that we devise uti-
+lize relevance language models [8]. Relevance models were
+used for other purposes in various predictors [3, 14, 5, 10].
+We demonstrate the merits of integrating in our framework
+one such state-of-the-art predictor [14].
+
+3. PREDICTION FRAMEWORK
+
+Let q, d and D denote a query, a document, and a corpus
+of documents, respectively. The task we pursue is estimating
+the eﬀectiveness of a retrieval performed over D in response
+to q when no relevance judgments are available [2] — i.e.,
+query performance prediction (QPP).
+
+Let Iq be the information need that q represents. Since
+relevance is determined with respect to Iq rather than with
+respect to q, the QPP task amounts, in probabilistic terms,
+to answering the following question:
+
+”What is the probability that the result list Dres, of the most
+highly ranked documents with respect to q, is relevant to Iq?”
+
+Formally, the task is estimating
+
+p(r|Iq, Dres) =
+
+p(Dres|Iq, r)p(r|Iq)
+
+p(Dres|Iq)
+
+,
+
+(1)
+
+853where r is the relevance event and p(r|Iq, Dres) is the prob-
+ability that the result list Dres satisﬁes Iq.
+
+Estimating p(Dres|Iq, r) is the (implicit) basis of many
+post-retrieval prediction methods, if q serves for Iq, as re-
+cently observed [7]. The denominator, p(Dres|Iq), is the
+probability that the result list Dres is retrieved using some
+representation of Iq regardless of relevance. If q is used for
+Iq, then the probability of retrieving Dres depends on the
+properties of the retrieval method employed. Accordingly,
+the denominator in Equation 1 can serve as a normalizer
+across diﬀerent retrieval methods [7]. However, standard
+QPP evaluation [2] is based on estimating the retrieval eﬀec-
+tiveness of a ﬁxed retrieval method across diﬀerent queries.
+Thus, the denominator in Equation 1 need not be computed
+for such evaluation, if q serves for Iq [7].
+
+The (novel) task we focus on is estimating the probability
+p(r|Iq) from Equation 1 that a relevance event happens for
+Iq. Obviously, the ability to satisfy Iq depends on the cor-
+pus D; e.g., if there are no documents in D that pertain to
+Iq then the estimate should be zero. Furthermore, the sat-
+isfaction of Iq also depends on the query q used to represent
+it. Thus, the estimate for p(r|Iq) can be approximated by:
+
+ˆp(r|Iq) ≈ ˆp(r|Iq, q, D) =
+
+ˆp(q|Iq, D, r)ˆp(r|Iq, D)
+
+ˆp(q|Iq, D)
+
+,
+
+(2)
+
+where ˆp(·) is an estimate for p(·).
+
+The estimate ˆp(q|Iq, D) for the probability that q is chosen
+to represent Iq for retrieval over D can be used to account,
+for example, for personalization aspects. We leave this task
+for future work, and assume here a ﬁxed user model, and
+accordingly, a ﬁxed (across queries) ˆp(q|Iq, D).
+
+If we use q for Iq in the estimate ˆp(r|Iq, D), we get the
+probabilistic basis for pre-retrieval prediction methods [6,
+4]. These predictors implicitly estimate the probability for
+a relevance event using information induced from the query
+and the corpus, but not from the result list (Dres).
+
+The task left for completing the instantiation of Equation
+2, and as a result that of Equation 1, is devising ˆp(q|Iq, D, r)
+— the estimate for the probability that q is the most likely
+query to eﬀectively represent Iq for retrieval over D.
+
+3.1 Estimating query representativeness
+
+The only signal about the information need Iq is the (short)
+query q. To induce a “richer” representation for Iq, we use
+the generative theory for relevance [8]. Speciﬁcally, we con-
+struct a (unigram) relevance language model R from doc-
+uments in the corpus D. (Details are provided in Section
+4.1.) Then, estimating q’s representativeness amounts to es-
+timating the probability p(q|R, D, r) of generating q by R.
+Henceforth, we refer to such estimates as measures of q’s
+“representativeness”, denoted X(q; R).
+
+We assume, as in the original relevance model’s formula-
+tion [8], that q’s terms ({qi}) are generated independently
+
+def
+
+p(qi|R); p(qi|R) is the probabil-
+by R: ˆp(q|R, D, r)
+ity assigned to qi by R. To prevent the query-length bias,
+we use the geometric mean of the generation probabilities
+which results in the GEO measure:
+
+= Qqi
+
+GEO(q; R)
+
+def
+
+= |q|sYqi∈q
+
+p(qi|R);
+
+|q| is the number of terms in q.
+
+We also consider the arithmetic mean of the generation
+
+probabilities, ARITH, as a representativeness measure:
+
+ARIT H(q; R)
+
+def
+=
+
+ˆp(qi|R).
+
+1
+
+|q| Xqi∈q
+
+For comparison purposes, we study the min and max aggre-
+gators of the generation probabilities:
+
+M IN (q; R)
+
+def
+= min
+qi∈q
+
+p(qi|R);
+
+M AX(q; R)
+
+def
+= max
+qi∈q
+
+p(qi|R).
+
+Another measure that we consider is the weighted entropy
+of R, where q’s terms are assigned with a unit weight and
+all other terms in the vocabulary are assigned a zero weight:
+
+EN T (q; R)
+
+def
+
+= −Xqi∈q
+
+ˆp(qi|R) log ˆp(qi|R).
+
+The underlying assumption is that high entropy, which im-
+plies to a relatively uniform importance assigned to q’s terms
+by R, is indicative of eﬀective representation by q. Indeed,
+too little emphasis on some query aspects was identiﬁed as
+a major cause for retrieval failures [1].
+
+4. EVALUATION
+
+We next present an evaluation of our query-performance
+prediction (QPP) framework. We begin by describing the
+experimental setup in Section 4.1. In Section 4.2.1 we fo-
+cus on using the query-representativeness measures. To that
+end, we use an oracle-based experiment where the relevance
+model is constructed only from relevant documents. In Sec-
+tion 4.2.2 we study the integration of the representativeness
+measures with post-retrieval predictors in our framework.
+
+Collection Data
+
+# of Docs
+
+Topics
+
+Avg.
+
+TREC12
+TREC5
+ROBUST
+
+Disks 1,2
+Disks 2,4
+Disks 4,5-CR
+
+741,854
+524,929
+528,155
+
+WT10G
+
+WT10g
+
+1,692,096
+
+query length
+
+51-200
+251-300
+301-450,
+601-700
+451-550
+
+3.52
+3.08
+2.64
+
+2.66
+
+Table 1: TREC datasets used for experiments.
+
+4.1 Experimental setup
+
+Table 1 presents the TREC datasets used for experiments.
+TREC12, TREC5 and ROBUST are composed (mostly) of
+newswire documents, while WT10G is a noisy Web collec-
+tion. Titles of TREC topics serve for queries. Documents
+and queries were stemmed with the Krovetz stemmer and
+stopwords (on the INQUERY list) were removed. The Indri
+toolkit (www.lemurproject.org) was used for experiments.
+
+Following common practice [2], prediction quality is mea-
+sured by the Pearson correlation between the true average
+precision (AP@1000) for the queries, as determined using
+the relevance judgments in the qrels ﬁles, and the values
+assigned to these queries by a predictor.
+
+The query likelihood method [11] serves for the retrieval
+method, the eﬀectiveness of which we predict. Document d’s
+
+retrieval score is the log query likelihood: logQqi∈q p(qi|d);
+
+p(qi|d) is the probability assigned to qi by a Dirichlet
+
+854smoothed unigram language model induced from d with the
+smoothing parameter set to 1000 [13].
+
+We use relevance model #1 (RM1) [8] in the query repre-
+
+def
+
+= Pd∈S p(w|d)p(d|q); S is
+
+sentativeness measures: p(w|R)
+a set of documents; p(w|d) is the maximum likelihood esti-
+mate of term w with respect to d; p(d|q) is (i) 1
+|S| when S is
+a set of relevant documents as is the case in Section 4.2.1;
+and, (ii) d’s normalized query likelihood:
+Pd′∈S p(q|d′) , when
+S is the set of all documents in the corpus that contain at
+least one query term as is the case in Section 4.2.2. No term
+clipping was employed for RM1.
+
+p(q|d)
+
+4.2 Experimental results
+
+4.2.1 The query-representativeness measures
+
+The query-representativeness measures play an important
+role in our QPP framework, and are novel to this study.
+Thus, we ﬁrst perform a controlled experiment to explore
+the potential extent to which these measures can attest to
+query performance. To that end, we let the measures use a
+relevance model of a (very) high quality. Speciﬁcally, RM1
+is constructed from all relevant documents in the qrels ﬁles
+as described in Section 4.1. Table 2 presents the prediction
+quality of using the representativeness measures by them-
+selves as query-performance predictors. As can be seen, the
+prediction quality numbers are in many cases quite high. All
+these numbers — which are Pearson correlations — are dif-
+ferent than zero to a statistically signiﬁcant degree according
+to the two-tailed t-test with a 95% conﬁdence level.
+
+We can also see in Table 2 that GEO is the most eﬀec-
+tive measure except for TREC5. ARITH and MIN are also
+quite eﬀective, although often less than GEO. ENT is highly
+eﬀective for TREC5 and WT10G but much less eﬀective
+for TREC12 and ROBUST. The MAX measure is evidently
+less eﬀective than the others, except for TREC5. All in
+all, we see that diﬀerent statistics of the generation proba-
+bilities assigned by the relevance model to the query terms
+can serve as eﬀective query representativeness measures for
+query-performance prediction.
+
+GEO
+ARITH
+MIN
+MAX
+ENT
+
+TREC12 TREC5 ROBUST WT10G
+0.414
+0.356
+0.373
+0.24g,a
+0.375x
+
+0.588
+0.457g
+0.523g
+0.216g,a
+0.251g,a
+
+0.295
+0.398
+0.334
+0.351
+0.526x
+
+0.376
+0.274
+0.328
+
+n
+
+n
+
+0.153g,a
+n
+0.222g
+x
+
+Table 2: Using the representativeness measures by
+themselves as query-performance predictors with
+RM1 constructed from relevant documents. Bold-
+face: the best result in a column. ’g’, ’a’, ’n’, ’x’ and
+’e’ mark statistically signiﬁcant diﬀerences in cor-
+relation [12] with GEO, ARITH, MIN, MAX, and
+ENT, respectively.
+
+4.2.2 Integrating query-representativeness measures
+
+with post-retrieval predictors
+
+Query-representativeness measures are one component of
+our QPP framework. Other important components are post-
+retrieval and pre-retrieval prediction as described in Section
+3. Since (i) the query representativeness measures constitute
+a novel contribution of this paper, (ii) the merits of the in-
+tegration of post-retrieval and pre-retrieval prediction were
+
+already demonstrated in previous work [7], and, (iii) post-
+retrieval predictors often yield prediction quality that is sub-
+stantially better than that of pre-retrieval predictors [2], we
+focus on the integration of the representativeness measures
+with the post-retrieval predictors in our framework. The in-
+tegration is performed using Equations 1 and 2. In contrast
+to the case in Section 4.2.1, we use the standard practical
+QPP setting; that is, no relevance judgments are available.
+The relevance model used by the query-representativeness
+measures is constructed as described in Section 4.1 from all
+the documents in the corpus that contain at least one query
+term. Using only top-retrieved documents for constructing
+the relevance model resulted in inferior prediction quality.
+
+Three state-of-the-art post-retrieval predictors, NQC [9],
+WIG [14] and QF [14], are used. As these predictors incor-
+porate free parameters, we apply a train-test approach to set
+the values of the parameters. Since Pearson correlation is
+the evaluation metric for prediction quality, there should be
+as many queries as possible in both the train and test sets.
+Thus, each query set is randomly spit into two folds (train
+and test) of equal size. We use 40 such splits and report
+the average prediction quality over the test folds. For each
+split, we set the free-parameter values of each predictor by
+maximizing prediction quality over the train fold.
+
+NQC and WIG analyze the retrieval scores of top-retrieved
+documents, the number of which is set to values in {5, 10, 50,
+100, 500, 1000}. QF incorporates three parameters. The
+number of top-retrieved documents used to construct the rel-
+evance model (RM1) utilized by QF is selected from {5, 10, 25
+, 50, 75, 100, 200, 500, 700, 1000} and the number of terms used
+by this RM1 is set to 100 following previous recommenda-
+tions [10]. The cuttoﬀ used by the overlap-based similarity
+measure in QF is set to values in {5, 10, 50, 100, 500, 1000}.
+In Table 3 we present the average (over the 40 test folds)
+prediction quality of using the query-representativeness mea-
+sures alone; using the post-retrieval predictors alone; and,
+integrating the representativeness measures with the post-
+retrieval predictors in our framework. Although the query-
+representativeness measures do not incorporate free param-
+eters, we report their prediction quality when used alone us-
+ing the same test splits. When the measures are integrated
+with the post-retrieval predictors, the free-parameters of the
+integration are those of the post-retrieval predictors. In this
+case, the parameters are tuned by optimizing the prediction
+quality of the integration over the train folds, as is the case
+when using the post-retrieval predictors alone. Diﬀerences
+of prediction quality (i.e., Pearson correlations) are tested
+for statistical signiﬁcance using the two tailed paired t-test
+computed over the 40 splits with a 95% conﬁdence level.1
+
+We ﬁrst see in Table 3 — speciﬁcally, by referring to the
+underlined numbers — that the best prediction quality for
+the majority of the corpora is attained by integrating a rep-
+resentativeness measure with a post-retrieval predictor.
+
+Further exploration of Table 3 reveals the following. The
+GEO and ARITH measures are eﬀective — speciﬁcally, in
+comparison to the other representativeness measures which
+is reminiscent of the case in Table 2 — both as stand-alone
+
+1Note that the numbers in Table 2 are not comparable to
+those in Table 3. This is because the latter presents aver-
+ages over the train-test splits while the former is based on
+using the all queries for the test set. Furthermore, as noted
+above, the relevance models used for the representativeness
+measures are constructed using diﬀerent sets of documents.
+
+855TREC12 TREC5 ROBUST WT10G
+
+GEO
+ARITH
+MIN
+MAX
+ENT
+
+NQC
+NQC∧GEO
+NQC∧ARITH
+NQC∧MIN
+NQC∧MAX
+NQC∧ENT
+
+WIG
+WIG∧GEO
+WIG∧ARITH
+WIG∧MIN
+WIG∧MAX
+WIG∧ENT
+
+QF
+QF∧GEO
+QF∧ARITH
+QF∧MIN
+QF∧MAX
+QF∧ENT
+
+0.642
+0.635
+0.583
+0.465
+0.277
+
+0.666
+0.705p
+q
+0.713p
+q
+0.663q
+0.672q
+0.598p
+q
+
+0.665
+0.688p
+q
+0.689p
+q
+0.645p
+q
+0.604p
+q
+0.462p
+q
+
+0.673
+0.723p
+q
+0.711p
+q
+0.692q
+0.608p
+q
+0.498p
+q
+
+0.380
+0.435
+0.272
+0.396
+0.381
+
+0.289
+0.303q
+0.323q
+0.272
+0.303q
+0.299q
+
+0.250
+0.371p
+0.373p
+q
+0.319p
+q
+0.338p
+q
+0.334p
+q
+
+0.313
+0.378p
+0.429p
+0.314q
+0.438p
+q
+0.393p
+
+0.407
+0.419
+0.352
+0.366
+0.309
+
+0.506
+0.520p
+q
+0.534p
+q
+0.456p
+q
+0.508q
+0.491p
+q
+
+0.514
+0.467p
+q
+0.480p
+q
+0.416p
+q
+0.447p
+q
+0.409p
+q
+
+0.500
+0.518p
+q
+0.528p
+q
+0.471p
+q
+0.504q
+0.485p
+q
+
+0.317
+0.287
+0.305
+0.210
+0.256
+
+0.422
+
+0.411q
+0.375p
+q
+0.405q
+0.309p
+q
+0.421q
+
+0.393
+0.316p
+0.285p
+0.313p
+0.240p
+q
+0.333p
+q
+
+0.267
+0.372p
+q
+0.353p
+q
+0.361p
+q
+0.272q
+0.307p
+q
+
+Table 3: Average prediction quality over the
+test folds of the query-representativeness mea-
+sures, post-retrieval predictors, and their integra-
+tion (marked with ∧). Boldface:
+the best re-
+sult per corpus and a post-retrieval block; under-
+line:
+’q’ and ’p’
+mark statistically signiﬁcant diﬀerences with using
+the query-representativeness measure alone and the
+post-retrieval predictor alone, respectively.
+
+the best result in a column.
+
+predictors and when integrated with the post-retrieval pre-
+dictors. Indeed, integrating each of GEO and ARITH with
+a post-retrieval predictor yields prediction quality that tran-
+scends that of using the post-retrieval predictor alone in 9
+out of the 12 relevant comparisons (three post-retrieval pre-
+dictors and four corpora); many of these improvements are
+substantial and statistically signiﬁcant.
+
+These ﬁndings, as those presented above, attest to the
+merits of our QPP framework that integrates two diﬀer-
+ent, and evidently complementary, aspects of prediction;
+namely, post-retrieval analysis of the result list and query-
+representativeness estimation.2
+
+In comparing the prediction quality numbers in Table 3 for
+the three post-retrieval predictors we make the following ob-
+servation. For QF and WIG the integration with the query-
+representativeness measures yields the highest and lowest
+number, respectively, of cases of improvement over using
+the post-retrieval predictor alone.
+
+2It is not a surprise, therefore, that the post-retrieval pre-
+dictors when used alone outperform in most cases the rep-
+resentativeness measures when used alone. This is because
+the post-retrieval predictors analyze the result list, while
+the representativeness measures do not. For TREC5, how-
+ever, the reverse holds. Presumably, this is because there
+are only 50 queries for TREC5, while for all other corpora
+there are at least 100 queries. A relatively small query set
+makes it diﬃcult to learn the free-parameter values of the
+post-retrieval predictors, while representativeness measures
+do not incorporate free parameters.
+
+5. CONCLUSIONS AND FUTURE WORK
+
+We presented a novel probabilistic framework for the query-
+performance prediction task. The framework gives rise to an
+important aspect that was not addressed in previous work:
+the extent to which the query eﬀectively represents the un-
+derlying information need for retrieval. We devised query-
+representativeness measures using relevance language mod-
+els. Empirical evaluation showed that integrating the most
+eﬀective measures with state-of-the-art post-retrieval pre-
+dictors in our framework often yields prediction quality that
+signiﬁcantly transcends that of using the predictors alone.
+
+Devising additional query-representativeness measures, and
+
+integrating pre-retrieval predictors with post-retrieval pre-
+dictors and query-representativeness measures in our frame-
+work, are future venues to explore.
+
+6. ACKNOWLEDGMENTS
+
+We thank the reviewers for their comments. This work
+has been supported in part by the Israel Science Foundation
+under grant no. 433/12 and by a Google faculty research
+award. Any opinions, ﬁndings and conclusions or recom-
+mendations expressed in this material are the authors’ and
+do not necessarily reﬂect those of the sponsors.
+
+7. REFERENCES
+
+[1] C. Buckley. Why current IR engines fail. In Proceedings of
+
+SIGIR, pages 584–585, 2004. Poster.
+
+[2] D. Carmel and E. Yom-Tov. Estimating the Query Diﬃculty
+for Information Retrieval. Synthesis Lectures on Information
+Concepts, Retrieval, and Services. Morgan & Claypool
+Publishers, 2010.
+
+[3] S. Cronen-Townsend, Y. Zhou, and W. B. Croft. Predicting
+
+query performance. In Proceedings of SIGIR, pages 299–306,
+2002.
+
+[4] C. Hauﬀ, D. Hiemstra, and F. de Jong. A survey of
+
+pre-retrieval query performance predictors. In Proceedings of
+CIKM, pages 1419–1420, 2008.
+
+[5] C. Hauﬀ, V. Murdock, and R. Baeza-Yates. Improved query
+
+diﬃculty prediction for the web. In Proceedings of CIKM,
+pages 439–448, 2008.
+
+[6] B. He and I. Ounis. Inferring query performance using
+
+pre-retrieval predictors. In Proceedings of SPIRE, pages 43–54,
+2004.
+
+[7] O. Kurland, A. Shtok, S. Hummel, F. Raiber, D. Carmel, and
+
+O. Rom. Back to the roots: A probabilistic framework for
+query-performance prediction. In Proceedings of CIKM, pages
+823–832, 2012.
+
+[8] V. Lavrenko and W. B. Croft. Relevance-based language
+
+models. In Proceedings of SIGIR, pages 120–127, 2001.
+[9] A. Shtok, O. Kurland, and D. Carmel. Predicting query
+
+performance by query-drift estimation. In Proceedings of
+ICTIR, pages 305–312, 2009.
+
+[10] A. Shtok, O. Kurland, and D. Carmel. Using statistical decision
+
+theory and relevance models for query-performance prediction.
+In Proccedings of SIGIR, pages 259–266, 2010.
+
+[11] F. Song and W. B. Croft. A general language model for
+
+information retrieval (poster abstract). In Proceedings of
+SIGIR, pages 279–280, 1999.
+
+[12] J. H. Steiger. Tests for comparing elements of a correlation
+
+matrix. Psychological Bulletin, 87(2):245–251, 1980.
+
+[13] C. Zhai and J. D. Laﬀerty. A study of smoothing methods for
+
+language models applied to ad hoc information retrieval. In
+Proceedings of SIGIR, pages 334–342, 2001.
+
+[14] Y. Zhou and W. B. Croft. Query performance prediction in web
+search environments. In Proceedings of SIGIR, pages 543–550,
+2007.
+
+856

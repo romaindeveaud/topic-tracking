@@ -1,0 +1,2236 @@
+Opportunity Models for E-commerce Recommendation:
+
+Right Product, Right Time
+
+Jian Wang, Yi Zhang
+School of Engineering
+
+University of California, Santa Cruz
+
+Santa Cruz, CA 95060 USA
+
+{jwang30, yiz}@soe.ucsc.edu
+
+ABSTRACT
+Most of existing e-commerce recommender systems aim to
+recommend the right product to a user, based on whether
+the user is likely to purchase or like a product. On the other
+hand, the eﬀectiveness of recommendations also depends on
+the time of the recommendation. Let us take a user who
+just purchased a laptop as an example. She may purchase a
+replacement battery in 2 years (assuming that the laptop’s
+original battery often fails to work around that time) and
+purchase a new laptop in another 2 years. In this case, it is
+not a good idea to recommend a new laptop or a replacement
+battery right after the user purchased the new laptop.
+It
+could hurt the user’s satisfaction of the recommender system
+if she receives a potentially right product recommendation
+at the wrong time. We argue that a system should not only
+recommend the most relevant item, but also recommend at
+the right time.
+
+This paper studies the new problem: how to recommend
+the right product at the right time? We adapt the propor-
+tional hazards modeling approach in survival analysis to the
+recommendation research ﬁeld and propose a new opportu-
+nity model to explicitly incorporate time in an e-commerce
+recommender system. The new model estimates the joint
+probability of a user making a follow-up purchase of a par-
+ticular product at a particular time. This joint purchase
+probability can be leveraged by recommender systems in
+various scenarios, including the zero-query pull-based recom-
+mendation scenario (e.g. recommendation on an e-commerce
+web site) and a proactive push-based promotion scenario
+(e.g. email or text message based marketing). We evaluate
+the opportunity modeling approach with multiple metrics.
+Experimental results on a data collected by a real-world
+e-commerce website(shop.com) show that it can predict a
+user’s follow-up purchase behavior at a particular time with
+descent accuracy. In addition, the opportunity model signif-
+icantly improves the conversion rate in pull-based systems
+and the user satisfaction/utility in push-based systems.
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for proﬁt or commercial advantage and that copies bear
+this notice and the full citation on the ﬁrst page. Copyrights for components
+of this work owned by others than ACM must be honored. Abstracting with
+credit is permitted. To copy otherwise, or republish, to post on servers or to
+redistribute to lists, requires prior speciﬁc permission and/or a fee. Request
+permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright 2013 ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+Categories and Subject Descriptors
+H.3.3 [Information Storage and Retrieval]: Information
+Search and Retrieval
+
+General Terms
+Algorithms, Design, Experimentation
+
+Keywords
+Recommender System; Opportunity Model; E-commerce
+
+1.
+
+INTRODUCTION
+
+As online shopping becomes popular, e-commerce recom-
+mendation is an increasingly important business tool for pro-
+moting sales. Researchers and industry practitioners are
+looking for all possible approaches to improve the recom-
+mendation performance. Even a minor improvement could
+lead to a big business return.
+
+Traditional recommender systems focus on ﬁnding the
+right item to recommend. Major approaches include content-
+based methods, collaborative ﬁltering methods and hybrid
+methods. For example, if a user viewed or purchased some
+camera(s) in the website, the system recommends more sim-
+ilar items (e.g.
+similar cameras) to the user. Recent re-
+search [19] proposed that recommender systems should rec-
+ommend items that maximize the users’ marginal utility,
+instead of only items that a user likes. As the marginal util-
+ity of a camera decreases immediately after a user purchased
+a camera, a system’s follow-up recommendation should in-
+clude camera accessories instead of similar cameras.
+
+On the other hand, the user satisfaction/utility depends
+on both the relevance and the time of the recommendation.
+While an irrelevant recommendation results in a negative
+utility, the opportunity cost of recommending a relevant
+item at the wrong time could also be high, as we wasted
+the space while giving the user a negative impression. This
+is especially a problem for email or message based recom-
+mendations, as it wastes a user’s time and eﬀort to receive
+product recommendation emails/messages that are full of
+products she does not need to purchase at the time. In the
+long term, the user may have negative impression about the
+company, unsubscribe from the marketing email list, label
+the emails as spams, or uninstall the message application.
+
+To address these issues, recommender systems need to an-
+swer the following question: when is the right time for the
+system to make recommendations of the right product(s)?
+For example, after a user purchased a camera, whether and
+
+303when should the system recommend related accessories in-
+cluding camera lenses, batteries, digital photo frames, etc.?
+Multiple heuristic approaches [18, 24] have been proposed
+to tackle this problem. In this paper, we propose a theoreti-
+cal model to learn the probability of a user making a follow-
+up purchase at a particular time. The model is inspired
+by the hazards model in survival analysis in statistics. The
+purchase time would be inﬂuenced by multiple factors, such
+as the user’s characteristics, the user’s purchase history, the
+product promotion information, the global environment and
+so on. Thus we propose to leverage the proportional haz-
+ards modeling approach which incorporates related factors
+as covariates(i.e., features). We further extend the model
+with the hierarchical Bayesian framework to handle the data
+sparsity issue. The new model is denoted as the Opportunity
+Model in this paper. It predicts the joint purchase proba-
+bility, i.e., the probability of a user purchasing a product at
+a particular time. It helps to promote a right item at the
+right time which further enhances the user satisfaction. Ex-
+perimental results are performed with a dataset from a real-
+world e-commerce website. Detailed analysis shows that the
+opportunity model could help to signiﬁcantly improve the
+conversion rate and the user satisfaction.
+
+The major contribution of this paper includes:
+• We propose a new research problem in recommender
+systems: When is the right time to make recommenda-
+tion of the right product in the e-commerce domain?
+• To solve this problem, we propose a principled ap-
+proach, (i.e. theopportunity model), to predict the
+joint probability of purchasing a product and the time
+of the event. We extend the proportional hazards
+model in statistics with the hierarchical Bayesian frame-
+work as part of the solution, and derive detailed infer-
+ence steps based on the variational Bayesian algorithm.
+• We leverage the joint probability in both the zero-
+
+query pull-based recommendation scenario and the proac-
+tive push-based email/message promotion scenario 1.
+In particular, the probability enables a proactive rec-
+ommendation agent to decide whether to send recom-
+mendations of certain items to a user at a particular
+time based on a solid utility optimization framework.
+Experimental results show that the opportunity mod-
+eling approach signiﬁcantly improve the user satisfac-
+tion and the conversion rate of the system.
+
+2. RELATED WORK
+
+To provide recommendations to a user, recommendation
+systems usually predict a user’s ratings for each item or
+probability of purchasing, then rank all items in the de-
+scending order. There are two major recommendation ap-
+proaches: content-based ﬁltering and collaborative ﬁltering.
+Content-based ﬁltering [12]assumes that descriptive features
+of an item indicate a user’s preferences. Thus a recom-
+mender system estimates the score of each item based on
+descriptive features of other items the user likes or dislikes.
+Usually, the system recommends items that are similar to
+what the user liked before. On the other hand, collabora-
+tive ﬁltering [7, 18, 13, 5] assumes that users with similar
+1In the pull-based scenario, a user comes to the website and
+views some recommendation. In the push-based scenario, a
+system sends promotion emails or messages to the user.
+
+tastes on some items may also have similar preferences on
+other items. Thus the main idea is to use the behavior his-
+tory from other like-minded users to provide the current user
+with good recommendations. Research on collaborative ﬁl-
+tering algorithms reached a peak due to the 1 million dollar
+Netﬂix movie recommendation competition. Factorization-
+based collaborative ﬁltering approaches [3, 9, 19, 17], such
+as the regularized Singular Value Decomposition, performed
+well on this competition. A common characteristic of these
+models is the introduction of user latent factors and/or item
+latent factors to solve the data sparsity issue. In the ﬁeld of
+recommender systems, the eﬀect of time [10, 18, 24] has re-
+ceived some research attention recently. One focus is about
+the drift of the user’s preference over time [10, 23, 15]. Ko-
+ren [10] revamped two popular collaborative ﬁltering meth-
+ods by modeling the time drifting factor of user preferences.
+Rendel et al. [15] proposed a factorized personalized model
+that subsumes both a common Markov chain and the normal
+matrix factorization model.
+
+Recommendation in the e-commerce domain is a topic
+that has been studied in the IR community [8, 20]. Several
+methods have been tried in this domain, including neighborhood-
+based method, graph models [6], MDP-based methods [16],
+multi attribute utility theory based methods [11] and so on.
+In general, most of these existing methods, directly or indi-
+rectly, only estimate whether a user would like an item or
+purchase an item. Some recent work studied modeling the
+time interval between purchase orders in the e-commerce
+domain [18, 24]. Wang et al. [18] discovered diﬀerent post-
+purchase behavior in diﬀerent time windows after purchas-
+ing. Zhao et al. [24] used the purchasing time interval to im-
+prove the temporal diversity of recommendations [15]. The
+time interval and the corresponding purchase probability
+is modeled inside the framework of a utility-based recom-
+mender system [19]. The hybrid system takes the time in-
+terval into consideration when ranking all candidate items.
+Compared to the prior work about time, our work explicitly
+models the joint probability of purchasing the product at the
+time based on a solid theoretical foundation. We explicitly
+model the conditional probability as a white box by leverag-
+ing Weibull distribution with various covariates to estimate
+the time-based probabilistic density. These covariates enable
+us to capture various time-dependent patterns such as local
+changes, cyclic behavior, seasonable pattern, general trend
+of follow-up purchase behaviors, which are not captured by
+the prior work. Besides, the joint probability of product and
+time enables us to improve the recommendation accuracy.
+
+3. OPPORTUNITY MODEL IN E-COMMERCE
+
+To recommend the right product at the right time, we
+exam each candidate product for each user at a particular
+decision time. We propose to build an opportunity model
+to estimate the probability of a user purchasing the prod-
+uct at a particular time interval (i.e. (y, y + Δt]). That is
+the joint probability P (p product, T ∈ (y, y + Δt]), where
+T is the purchasing time. Let P (p product) represent the
+probability of the user purchasing the product, and P (T ∈
+(y, y + Δt]|p product) represent the conditional probability
+of the user purchasing the product at a particular time pe-
+riod conditioned on that the user will purchase the product.
+
+304Based on the chain rule, we have the joint probability:
+
+P (p product, T ∈ (y, y + Δt])
+= P (T ∈ (y, y + Δt]|p product)P (p product)
+
+(1)
+
+We propose to adapt hazards models in survival analysis to
+estimate P (T ∈ (y, y + Δt]|p product), and adapt existing
+recommendation algorithms to estimate P (p product).
+3.1 Hazards Model in Survival Analysis
+
+Survival analysis is a heavily studied topic in statistics,
+which is named as duration modeling in economics or reli-
+ability analysis in engineering. One major part of survival
+analysis is to estimate the time of an event, such as when a
+machine fails to work or when a patient fails to survive. In
+the e-commerce domain, we can view the task of conditional
+opportunity model as predicting the time of the follow-up
+purchase event of the product. Follow-up purchases may in-
+clude repurchases that happen regularly or new purchases
+that are triggered by the previous purchase. Given the sim-
+ilar nature of survival analysis and our e-task, we propose
+to use the hazards model in survival analysis to estimate
+p(y|p product) in this paper.
+
+Let us review basic hazards models in survival analysis.
+Let p(y) denote the density function of the time distribution
+of an event. Let y be a value of time and T be a random
+variable representing the event time. The cumulative distri-
+bution function is denoted as P (y) =P r (T ≤ y) and sur-
+vival function is denoted as S(y) = P r(T > y) = 1 − P (y).
+The hazards function is h(y) = p(y)
+It indicates the in-
+S(y) .
+stantaneous potential per unit time for the event to occur
+at time y given that the event has not occurred up to time
+y.
+
+The survival analysis further extends the model with co-
+variates. Covariates are features that would aﬀect the sur-
+vival time. For example, if a product is on promotion, it
+might shorten the time before a user waits to purchase it.
+The covariates could include diﬀerent types of features, in-
+cluding time independent variables (user age, gender, house-
+hold income, product brand etc.), time dependent internal
+variables (time since last purchase of the same product, re-
+cent user search queries or clicks etc.) and time dependent
+external variables (global economy, seasonal index, day of
+the week, etc.). There are two common approaches to in-
+corporate covariates x(a vector of features) in a hazards
+model. The ﬁrst approach is the Cox proportional hazards
+model [14]. It assumes that covariates are multiplicatively
+related to the hazards. The second approach is the Accel-
+erated life model [22]. It assumes that covariates are multi-
+plicatively related to the survival time. Research in statistics
+discovered that the Weibull distribution satisﬁes assump-
+tions in both directions. The density function of the basic
+Weibull distribution is shown in Equation 2 [21].
+
+p(y) =γθyγ−1
+
+exp{−θyγ}
+
+(2)
+
+where γ is sometimes called the shape parameter and held
+ﬁxed. If γ = 1, the Weibull model reduces to the exponential
+model and the hazard is constant. If γ > 1, the hazard in-
+creases as time increases. If γ < 1, the hazard decreases over
+time. θ is the scale parameter and can be re-parameterized
+based on a regression parameter β and covariates x as fol-
+lows:
+
+p(y) =γexp{βT x}yγ−1
+
+exp{−exp{βT x}yγ}
+
+(3)
+
+(cid:3)(cid:16)(cid:13)(cid:13)(cid:16)(cid:25)(cid:31)(cid:23)(cid:17)(cid:1)(cid:17)(cid:23)(cid:18)(cid:7)(cid:10)(cid:5)(cid:19)(cid:8)(cid:1)
+
+(cid:2)(cid:5)(cid:20)(cid:8)(cid:9)(cid:16)(cid:18)(cid:26)(cid:1)(cid:14)(cid:1)
+
+(cid:16)(cid:6)(cid:19)(cid:8)(cid:18)(cid:24)(cid:5)(cid:21)(cid:16)(cid:15)(cid:1)(cid:11)(cid:1)
+
+(cid:11)(cid:20)(cid:8)(cid:14)(cid:29)(cid:1)(cid:12)(cid:32)(cid:28)(cid:1)(cid:30)(cid:28)(cid:1)(cid:12)(cid:19)(cid:28)(cid:1)(cid:30)(cid:1)(cid:12)(cid:14)(cid:31)(cid:32)(cid:1)
+
+(cid:11)(cid:20)(cid:8)(cid:14)(cid:29)(cid:1)(cid:12)(cid:14)(cid:1)
+
+(cid:4)(cid:11)(cid:14)(cid:8)(cid:1)(cid:1)
+
+(cid:21)(cid:14)(cid:8)(cid:19)(cid:20)(cid:5)(cid:14)(cid:17)
+
+(cid:20)(cid:19)(cid:1)
+
+(cid:26)(cid:14)(cid:28)(cid:11)(cid:1)
+
+(cid:21)(cid:14)(cid:8)(cid:19)(cid:20)(cid:5)(cid:14)(cid:17)(cid:1)
+
+(cid:20)(cid:14)(cid:1)
+
+Figure 1: Illustration of the relationship of variables.
+The user ﬁrst makes a series of product purchases
+before timestamp tm. Then the user makes a pur-
+chase of item jm in category m at timestamp tm. This
+follow-up purchase in category m is the ith observa-
+tion in category m. Suppose that the purchase of jm
+is triggered by item js at timestamp ts. Purchase
+time ym,i = tm − ts is the time gap between tm and ts.
+An observation i is associated with two major vari-
+ables: 1) purchase time ym,i and 2) covariates xm,i
+(which is not shown in the ﬁgure).
+
+where exp{βT x} represents the new scale parameter θ
+. This
+density function represents the basic proportional hazards
+model that models the event time with associated covari-
+ates. The corresponding hazards function is simply h(y) =
+γθ
+3.2 Notations
+
+yγ−1.
+
+(cid:2)
+
+(cid:2)
+
+Here we describe notations in the e-commerce domain in
+this paper. The relationship between diﬀerent variables is
+shown in Figure 1.
+
+• u = 1, 2, ..., U : the index of users.
+• m = 1, 2, ..., M : the index of item categories. In the e-
+commerce domain, it is the category of the product,
+such as Apparel & Accessories|Swimwear, Baby|Car
+Seats, Sports and Fitness|Football, etc.
+
+• jm = 1m, 2m, ..., Jm: the index of items in category m.
+
+In this paper, an item is a product.
+
+• tm: the purchase timestamp of item jm.
+• Δt: the window size of the purchase time in consider-
+
+ation (such as 3 days or 1 hour)
+
+• D: The observed data of all follow-up purchases from
+all users. Each category m has Nm follow-up purchase
+observation from all users. Each follow-up purchase
+observation i = 1, ..., Nm in category m is associated
+with the purchase time ym,i and covariates xm,i.
+
+• ym,i: the purchase time of the ith observation in cat-
+egory m. ym,i = tm − ts is the time distance between
+
+305the user’s purchase timestamp tm of item jm and the
+user’s purchase timestamp ts of the triggering item js.
+• xm,i: the k-dimensional vector of covariates associated
+with the ith observation in category m. Covariates
+could be associated with user u who makes the pur-
+chase, the user’s purchase history j1, ..., jm−1, the pur-
+chase item jm, the global environment, etc.
+
+• P (p product = yes): the probability of a user purchas-
+ing the product. The probability is calculated for each
+user-product pair.
+
+• Opportunity model : density function/model to predict
+the joint purchase probability p(y, p product), i.e., the
+probability of a user purchasing of the product at the
+particular time.
+
+• Conditional opportunity model : density function/model
+to predict the conditional time probability p(y|p product),
+i.e., the probability of a user purchasing the product at
+the particular time, given that the user will purchase
+the product.
+
+3.3 Conditional Opportunity Model
+
+In this paper we propose to adapt the Cox proportional
+hazards model to the e-commerce domain and use it to esti-
+mate P (T ∈ (y, y + Δt]|p product). To do that, we learn the
+conditional opportunity model p(y|p product), which is the
+density function/model of the purchasing time. We can ei-
+ther learn one model per product or one model per product
+category. Without loss of generality, we describe the model
+by assuming one model per category in this paper.
+
+In the real world, a small number of categories are of-
+ten purchased while most categories have few purchases. To
+solve the data sparsity issue, we follow a common practice
+and extend the conditional opportunity model with a hier-
+archical Bayesian framework as illustrated in Figure 2. This
+framework helps the category with few observations by bor-
+rowing information from other categories through a common
+prior for parameters of all proportional hazards models.
+For each category m, βm is sampled from a Gaussian dis-
+tribution: βm ∼ N (μβ, Σβ) and γm is sampled from the
+Gamma distribution: γm ∼ Gamma(aγ , bγ). We denote
+φ = (μβ, Σβ, aγ, bγ). For each ith observation in category
+m with its observed covariates xm,i, its purchase time ym,i
+is sampled from the conditional opportunity model
+
+p(ym,i|βm, γm)
+= γmexp{βT
+
+mxm,i}yγm−1
+
+m,i
+
+exp{−exp{βT
+
+mxm,i}yγm
+
+m,i
+
+(4)
+
+}
+
+Consider that data D consists of a series of observations from
+all categories. Purchase times in the observations are gen-
+erated by using a set of hidden variables θ = {θ1, θ2..., θM}
+(θm = {βm, γm}). The likelihood can be written as a func-
+tion of φ = (μβ, Σβ, aγ, bγ). We use ym to represent {ym,1,
+}, i.e., observation times in category m.
+M(cid:2)
+..., ym,i, ..., ym,Nm
+
+M(cid:2)
+
+(cid:3)
+
+p(θm, ym|φ)dθm (5)
+
+p(D|φ) =
+
+p(ym|φ) =
+
+m=1
+
+m=1
+
+data 
+
+category 
+
+Figure 2: Illustration of dependencies of variables
+in the hierarchical conditional opportunity model.
+It shows the ith observation of category m. ym,i is
+the purchase time which is dependent on the condi-
+tional opportunity model θm = {βm, γm} of category
+m, as wells the observed covariates xm,i of this pur-
+chase. Each category m has its own parameters of
+the conditional opportunity model βm, γm. Models of
+each category share information through the prior,
+φ = (μβ, Σβ, aγ, bγ).
+
+3.4 Parameter Inference with Variational
+
+Bayesian
+
+There is no closed-form solution for the estimation of
+the model parameters. We follow the variational Bayesian
+method[1] for constrained (approximate) optimization to de-
+rive an iterative process to ﬁnd the approximate solution.
+Maximizing the likelihood in Equation 5 is equivalent to
+maximizing the log likelihood L(φ).
+
+L(φ) = ln p(D|φ) =
+
+M(cid:4)
+
+m=1
+
+ln p(ym|φ) =
+
+(cid:3)
+
+M(cid:4)
+
+m=1
+
+ln
+
+p(θm, ym|φ)dθm
+
+We can simplify the problem by introducing an auxiliary
+distribution q(θm) for each hidden variable θm [1]. In the
+variational approach, we constrain q(θm) to be a particu-
+lar tractable form for computational eﬃciency.
+In partic-
+ular, we assume that q(βm) = N (μβm , Σβm ) and q(γm) =
+Gamma(aγm , bγm ). The process to infer parameters is to
+iterate between the following E-step and M-step until con-
+vergence.
+
+3.4.1 E-Step
+
+In the E-step, we infer the posterior distributions over
+hidden variables θm given the current parameter setting φ.
+There is no closed-form solution. Instead, we ﬁnd a tractable
+approximation of the posterior distribution of θm given φ
+(i.e, q(θm) that maximizes L(φ)).
+
+306L(φ) =
+
+m=1
+
+M(cid:2)
+≥ M(cid:2)
+M(cid:2)
+
+m=1
+
+ln
+
+(cid:3)
+
+(cid:3)
+
+=
+
+(cid:3)
+
+q(θm)
+
+p(θm, ym|φ)
+
+q(θm)
+
+dθm
+
+p(θm, ym|φ)
+
+dθm
+
+q(θm) ln
+
+q(θm)
+
+q(θm) lnp (ym|φ)dθm − M(cid:2)
+
+(cid:3)
+
+We can combine the above derivations with Equation 8,
+then ﬁnd q(θm) using the conjugate gradient descent method.
+3.4.2 M-Step
+
+In the M-step, the goal is to maximize F (q(θ1), ..., q(θM ), φ)
+
+in Equation 6 with respect to φ given all θm. It is same as
+to maximize the following quantity:
+
+m=1
+
+q(θm) ln
+
+q(θm)
+
+p(θm|ym, φ)
+
+dθm
+
+(6)
+
+(t+1) ← arg max
+φ
+
+φ
+
+q(θm) ln p(ym|φ)dθm
+
+(10)
+
+(cid:3)
+
+M(cid:4)
+
+m=1
+
+The optimal φ at this step can be estimated with the fol-
+lowing closed form:
+
+(cid:4)
+M
+μβm
+m
+(cid:4)
+M
+M
+m [Σβm + (μβm
+
+μβ =
+
+Σβ =
+
+aγ = Ψ
+
+−1(ln bγ +
+M aγ(cid:4)
+
+(cid:4)
+
+− μβ )(μβm
+
+− μβ )T ]
+
+M
+
+M
+
+m Ψ(aγm ) − ln(bγm )
+
+M
+
+)
+
+M
+m
+
+aγm
+bγm
+
+bγ =
+−1(∗) is the inverse digamma function.
+Joint Purchase Probability
+
+where Ψ
+3.5
+
+At a time y, we can decide whether to recommendation a
+particular product in category m to a particular user or not
+based on the following estimation: whether a user is likely to
+purchase the product in the near future (i.e. between time
+y and time y + Δt), given that the user has not purchased
+the product since a triggering time point. To do so, we
+need to estimate P (p product = yes, T ∈ (y, y + Δt]) =
+P (p product = yes)P (y < T ≤ y + Δt|T > y, p product =
+yes), where
+
+P (y < T ≤ y + Δt|T > y, p product = yes)
+
+P (T ≤ y + Δt) − P (T ≤ y)
+
+1 − P (T ≤ y)
+
+=
+
+(11)
+
+(12)
+
+where:
+
+P (T ≤ y)
+= 1 − Eβm,γm [exp{−yγm exp{βT
+≈ 1 − exp{Eβm,γm [−yγm exp{βT
+= 1 − exp{Eγm [−yγm ]Eβm [exp{βT
+= 1 − exp{−
+exp{μT
+
+baγm
+γm
+− ln y)aγm
+
+m
+
+m
+
+m
+
+(bγm
+
+xi}}]
+xi}]}
+
+βm
+
+xi}]}
+
+xi +
+
+1
+2
+
+xT
+i Σβm
+
+xi}}
+
+The approximation is used because there is no closed-form
+solution of the integration for calculating the expectation.
+
+To estimate P (p product = yes), i.e., the probability of
+the user purchasing the product, we can use any existing
+recommender systems through the logistic regression model:
+
+P (p product = yes) =
+
+1
+
+1 +e −f T x
+
+where x is a vector of features that are associated with the
+purchasing, which includes the score/output of the existing
+recommender system(such as SVD), as well as other features
+that might help to predict the user’s purchase probability. f
+is a vector of coeﬃcients that can be learnt by maximizing
+the likelihood of the training data.
+
+m=1
+
+≡F (q(θ1), ..., q(θM ), φ)
+(cid:3)
+
+To maximize L(φ), it is the same as minimize the following
+equation to ﬁnd each distribution q(θm):
+
+(t)
+
+q(θm)
+
+= arg min
+q(θm)
+
+q(θm) ln
+
+Given that p(θm|ym, φ) = p(ym|θm)p(θm|φ)
+
+q(θm)
+
+p(θm|ym, φ)
+(cid:3)
+
+p(ym|φ)
+KL[q(θm)||p(θm|φ)] −
+
+, we have:
+q(θm) ln p(ym|θm)dθm
+
+dθm
+
+(7)
+
+q(θm) = arg min
+q(θm)
+
+(8)
+
+The ﬁrst part in Equation 8 is the KL-divergence between
+the posterior distribution q(θm) and the prior distribution
+p(θm|φ).
+KL[q(θm)||p(θm|φ)] = KL[q(βm)||p(βm|φ)] + KL[q(γm)||p(γm|φ)]
+The KL-divergence between two Gaussian distributions is
+
+KL[q(βm)||p(βm|φ)]
+
+[tr(Σ
+
+−1
+β Σβm ) + (μβ − μβm )T Σ
+
+−1
+β (μβ − μβm )
+
+1
+=
+2
+− ln(
+
+det Σβm
+det Σβ
+
+) − k]
+
+The KL-divergence between two gamma distributions is
+
+KL[q(γm)||p(γm|φ)]
+= (aγm
+
+− aγ )Ψ(aγm ) − log Γ(aγm ) + log Γ(aγ )
+
++ aγ (log bγm
+
+− log bγ ) +a γm
+
+bγ − bγm
+
+bγm
+
+where Ψ(∗) is the digamma function.
+The second part in Equation 8 is to maximize the data
+likelihood of ym = {ym,1, ..., ym,i, ..., ym,Nm
+} with the cur-
+rent θm = {βm, γm}.
+
+q(θm) lnp (ym,i|θm)dθm
+
+(9)
+
+(cid:3)
+
+Nm(cid:2)
+
+(cid:3) (cid:3)
+
+i=1
+
+Nm(cid:2)
+
+i=1
+
+Nm(cid:2)
+
+=
+
+=
+
+i=1
+
+q(βm)q(γm)ln p(ym,i|βm, γm)dβmdγm
+
+[E(ln γm) +E (βm)T xm,i + (E(γm) − 1) ln ym,i
+
+− E(exp(βT
+
+xm,i))E(yγm
+
+m,i)]
+
+m
+
+The expectations in the above equation are
+
+E(ln γm) =Ψ(aγm ) − ln(bγm )
+E(βm) =μβm
+aγm
+E(γm) =
+bγm
+xm,i)) =exp{μT
+
+xm,i +
+
+βm
+
+1
+2
+
+E(yγm
+
+m,i) =
+
+baγm
+γm
+− ln ym,i)aγm
+
+(bγm
+
+E(exp(βT
+m
+
+xm,i
+
+T Σβm
+
+xm,i}
+
+307(cid:5)
+(cid:5)
+
+3.6
+
+Implementation Details
+
+The purchase time ym is determined by the purchase times-
+tamp of product jm and that of the triggering product js.
+The triggering product is not necessarily the product in
+the most recent purchase. There are multiple heuristic ap-
+proaches to ﬁnd the triggering item js in the user’s pur-
+chase history. Here we leverage the transition probability
+P (js, jm) in Equation 13.
+
+(13)
+
+P (ja, jb) =
+
+# (ja, jb) + λ
+# (ja,∗) + J · λ
+where # (ja, jb) is the number of follow-up purchases of jb
+# (ja,∗) is the number of follow-
+that happened after ja.
+up purchases after ja. J is the number of products and λ is
+the smoothing factor, which is set as 0.1.
+We ﬁrst rank all items {j1, ..., js, ..., jm−1} that happened
+less than kt days before jm and have P (js, jm) > T hrestran.
+Then we use the top one as the triggering item. Other ap-
+proaches can be explored in the future work. Although other
+purchases {j1, ..., js−1, js+1, ..., jm−1} in the user history are
+not treated as the triggering item, they are incorporated into
+the opportunity model as covariates xm,i.
+
+In this paper, we use the following covariates for each
+purchase of product jm made by user u at timestamp tm:
+whether user u purchased any product in category m in time
+bin tb1, ..., tbk; how many times the user u purchased any
+product in category m in time bin tb1, ..., tbk; whether the
+user purchased the product jm in time bin tb1, ..., tbk; how
+many times the user u purchased the product jm in time bin
+tb1, ..., tbk; which season tm is in, whether tm is in the holiday
+season, etc. Time bins tb1, ..., tbk are set as one day, one
+week, one month, two months, three months, six months,
+one year, etc. We choose these covariates to show the eﬀect
+of incorporating covariates in the conditional opportunity
+model. These covariates capture the change of the time
+distribution with the user’s purchase history, the seasonal
+change, the cyclic pattern, etc. All covariates are normalized
+in the scale of [0, 1].
+
+4. EVALUATION METHODOLOGY
+
+As we are studying a new problem of recommending the
+right product at the right time, there is no standard evalu-
+ation methodology. We design various experiments to eval-
+uate the performance of the opportunity model. Major re-
+search questions that we aim to answer are:
+
+Predictability of the conditional opportunity model
+How accurate is the conditional time probability that is
+predicted by the conditional opportunity model? How
+accurate is the predicted purchase time, compared to
+the actual purchase time? Are covariates useful?
+
+Predictability of the opportunity model Is the joint pur-
+
+chase probability a good signal of making recommen-
+dations? Does it generate a better ranking in tradi-
+tional zero-query pull-based recommendation systems?
+Can it help to improve the user satisfaction/utility in
+proactive push-based recommendation systems?
+
+4.1 Evaluation of Conditional Opportunity
+
+Model
+
+4.1.1 Metrics
+
+It is a relatively new research topic to predict the purchase
+time and evaluate the performance of such model. We intro-
+duce the following two metrics to evaluate the performance
+of the conditional opportunity model.
+
+The ﬁrst metric is the perplexity of the model. It is mo-
+tivated by the perplexity metric used to evaluate language
+models and speech recognition [2]. The perplexity measures
+how well a model predicts the testing data. It is deﬁned as
+follows:
+
+(cid:6)
+
+M(cid:2)
+
+Nm(cid:2)
+
+perplexity =
+
+m=1
+
+i=1
+
+P (T ∈ (y, y + Δt]|p product)
+
+1
+
+(cid:7)
+
+(cid:2)
+
+1
+
+M
+m=1 Nm
+
+(14)
+
+1
+
+(cid:2)
+
+= 2
+
+M
+m=1
+
+− (cid:2)
+
+(cid:2)Nm
+i=1
+
+M
+m=1 Nm
+
+log2P (T∈(y,y+Δt]|p product)
+where P (T ∈ (y, y+Δt]|p product) is deﬁned in Equation 11,
+and i is the index for a testing data point. A better model
+tend to give a higher data likelihood to the actual follow-
+up purchase time in the testing data, thus they have lower
+perplexity, which means they are less surprised by the test-
+ing data.
+
+− 1
+
+The second metric focuses on the diﬀerence between the
+estimated time ym,i and the actual time ˆym,i. After a model
+predicts the distribution p(ym,i|p purchase) of the purchase
+time, we use the median of the distribution as the esti-
+mated purchase time ˆym,i. The median of the distribu-
+1
+tion is exp(βmxm,i)
+rm . The error across all test-
+ing data can then be used to analyze and compare. The
+smaller the error, the better the model. Here we use three
+types of errors: mean absolute error(MAE), mean squared
+error(MSE) and mean absolute percentage error(MAPE =
+1(cid:2)
+
+|ˆym,i−ym,i|
+
+rm (ln 2)
+
+(cid:5)
+
+(cid:5)
+
+M
+m=1 Nm
+4.1.2 Conditional Opportunity Models to Compare
+In our experiments, we compare the following four condi-
+
+M
+m=1
+
+Nm
+i=1
+
+ym,i
+
+).
+
+tional opportunity models.
+
+Uniform assigns a uniform distribution to all time. p(ym,i
+|p purchase) =
+where Tunif orm is the max-
+imum time in consideration. We set Tunif orm = 500,
+i.e., 500 days, arbitrarily in this paper.
+
+Tunif orm
+
+1
+
+O-One is a conditional opportunity model that ﬁts a sin-
+gle set of parameters with no covariates (i.e., a ba-
+sic Weibull distribution) to the purchase data. All
+follow-up purchases in diﬀerent category m use the
+same model.
+
+O-Dest is a hierarchical conditional opportunity model that
+ﬁts one Weibull distribution per product category, with
+no covariates.
+
+O-DestCov further incorporates covariates into O-Dest. In
+this case, the probability density function changes for
+each user and product as values of the associated co-
+variates change over time.
+
+All models smooth the conditional probability estimation
+P (T ∈ (y, y + Δt]|p product) = max(P (minThres, T ∈ (y,
+
+308Table 1: The utility set of the recommender sys-
+tem. There are four types of utilities, depending
+on whether the system recommends the item to the
+user and whether the user purchases the item.
+
+show:Y show:N
+
+accept:Y
+accept:N
+
+uT P
+uF P
+
+uF N
+uT N
+
+y + Δt]|p product)) to avoid having a probability that is
+too low (such as when there is no triggering item before the
+purchase). minThres is set as 0.001. Δt in Equation 11 is set
+as 7 (i.e., 7 days) for all models during the prediction step.
+The threshold for the transition probability to consider the
+an item js as the triggering item is set as 0.01.
+4.2 Evaluation of Opportunity Model
+
+4.2.1 Metrics
+
+Here we evaluate the predictability of the opportunity
+model with the joint purchase probability in two scenarios.
+1) [Zero-query pull-based scenario] assumes the user
+comes to the site to look for products to purchase without
+issuing any search query. In this scenario, the goal is to dis-
+cover products that the user would purchase and recommend
+them to the user proactively. The system ranks all products
+by their joint purchase probability and recommends top K
+products to the user.
+
+The evaluation metric in this scenario is the conversion
+rate which reﬂects whether a user receives at least one good
+recommendation. Each testing time corresponds to the time
+when a user comes to the site and makes purchases. Let
+Spurchased contain all unique products in the order. Let
+Cpurchased contain all unique categories in the order. Let
+SK,recommended contain top K unique product recommen-
+dations. Let CK,recommended top K unique category recom-
+mendations. CRproduct is the conversion rate at the product
+level and CRcategory is the conversion rate at the category
+level. Signiﬁcance level of 0.05 with the paired two-tailed
+t-test is used to compare two models.
+
+CRproduct@K =
+
+CRcategory@K =
+
+1 Spurchased ∩ SK,recommended (cid:7)= ∅
+1 Cpurchased ∩ CK,recommended (cid:7)= ∅
+
+otherwise
+
+0
+
+otherwise
+
+(cid:5)
+(cid:5)
+
+0
+
+2) [Push-based email promotion scenario] assumes
+that recommender systems send email/message proactively
+to a user regularly regardless of whether the user comes to
+the site or not.
+
+The evaluation metric in this scenario is the average util-
+ity/user satisfaction. The utility for each type of recommen-
+dations is shown in Table 1. The utilityg for each email of
+recommendations is calculated by Equation 15.
+
+(cid:2)
+
+utilityg =
+
+(uT P Ishow,accept + uF P I
++ uF N I ¯show,accept + uT N I ¯show,
+
+show,
+
+¯accept
+
+¯accept)
+
+(15)
+
+I∗ is the indicator function where I∗ = 1 if ∗ is true. Unlike
+traditional metrics such as conversion rate@K, the utility
+metric considers both the positive eﬀect for good recommen-
+dations and the negative eﬀect for bad recommendations.
+The higher the utility, the better the model.
+
+.
+
+To achieve a better utility, the system with a ﬁltering
+component should send emails only if the expected utility
+of adding the product is higher than zero (i.e.
+the joint
+probability is higher than the threshold). The recommenda-
+tion threshold is automatically determined by the following
+equation [4]:
+
+uF P −uT N
+
+uF P −uT N +uF N −uT P
+
+We don’t have a real push-based email promotion system
+for a user study. Instead, we create an evaluation dataset
+with the purchase data from a pull-based e-commerce web-
+site. The goal is to evaluate each model’s predictability of
+discovering the “real opportunity” and avoiding the “fake op-
+portunity” in the email marketing. For each purchase at time
+t in the testing dataset, we let each model consider two op-
+portunities: sending a recommendation email the weekend
+right before t and sending an email on some other random
+weekend before t. Since existing models can not tell whether
+to send an email or not, they always send an email with top
+K recommendations for each opportunity. The opportunity
+model with a ﬁltering component will add a product to the
+email if the expected utility of adding the product is higher
+than zero. If no product is added to the email, the opportu-
+nity model would skip this opportunity and do not send an
+email. Recommendations in the email are compared with
+actual products that the user purchases in the week after
+the email is sent. Assume that there are G opportunities
+to send recommendation emails in the testing period. The
+average utility/user satisfaction utility can be calculated as
+
+following: utility =
+
+(cid:2)
+
+G
+g=1 utilityg
+
+G
+
+.
+
+4.2.2 Recommendation Models to Compare
+
+We choose the following recommendation models to com-
+
+pare:
+
+TopPop recommends most popular products to the user.
+
+SVD is a widely-used recommendation algorithm with a
+decent performance on the well-known Netﬂix compe-
+tition. It is the basis of several recommendation algo-
+rithms based on latent factors.
+
+SVD.util is the state-of-art recommendation algorithm in
+the e-commerce domain without time consideration.
+It modiﬁes SVD with the marginal net utility frame-
+work [19].
+
+Regression.Model is an alternative new approach to pre-
+dict the probability of a user purchasing a product
+at a particular time using a logistic regression model,
+with various important time-dependent features. This
+model contains features such as the SVD score of the
+product, whether the product/category has been pur-
+chased t days ago, how many time the product/category
+has been purchased t days ago, etc.
+
+Conditional.Opportunity.Model recommends products
+based on P (T ∈ (y, y + Δt]), which is estimated by
+the hierarchical conditional opportunity model with
+covariates.
+
+Opportunity.Model recommends products based on the
+joint probability of a user making a purchase of a prod-
+uct in the near future(P (p product, T ∈ (y, y + Δt])).
+Opportunity.Model.Filtering adds a ﬁltering component
+to Opportunity.M odel. In the push-based email sce-
+nario, it adds a product to the promotion email only
+
+309if the expected utility of adding the product is higher
+than zero.
+4.3 Dataset
+
+The purchase history from 2004-01-01 to 2009-03-08 col-
+lected on a real-world e-commerce website, shop.com, is used
+for our experiments. We use all purchases that have category
+information of the product. Tail users that made less than
+5 product purchases are ﬁltered out in the training data,
+which follows the similar pre-processing in related work [19,
+24].
+In addition, 10 possible spam users that made more
+than 200 product purchases are ﬁltered out as well. The
+remaining data contains 11,351 users and 67,291 products.
+There are 105,550 unique (user, product) pairs. This user-
+product matrix is quite sparse, with only 0.014% density.
+There are 380 categories in total.
+
+To evaluate the conditional opportunity model as in Sec-
+tion 4.1, 10-fold cross validation is used. To evaluate the
+opportunity model with the joint purchase probability as
+in Section 4.2, we sort all purchase history by time. The
+ﬁrst 90% is used as the training data (data before 2008-
+11-24) and the last 10% is used as the testing data (data
+after 2008-11-24). There are 7,014 testing cases in total. At
+the product level, there are 1,143 repurchase cases(16.29%)
+and 6,269 new purchase cases(89.37%). At the categorical
+level, there are 2,850 repurchase cases(i.e. 40.63% cases with
+purchase from the same category) and 4,850 new purchase
+cases(i.e. 69.14% cases with purchase from a new category).
+To train the regression model with SVD as one of the fea-
+tures, the ﬁrst half training data is used to train the SVD
+model and the second half training data is used to learn coef-
+ﬁcients in the regression model. The number of latent factors
+for all SVD-related models is set to 50. In the recommenda-
+tion step, all models recommend top K (K=5) products to
+the user. To save the computation time, Regression.M odel,
+Conditional.Opportunity.M odel and Opportunity.M odel ra-
+nk among top N recommendations from SVD and selects top
+K to recommend, where N = 100 and K = 5.
+The time density plots of some common transitions from
+products in the Baby|Feeding category to the target item
+jm are shown in Figure 3. This supports our motivation of
+identifying triggering items in the user history. For exam-
+ple, users who purchased from Baby|Feeding would purchase
+items in other Baby related categories in the future. The
+purchase time of the follow-up purchase does follow diﬀer-
+ent distributions for diﬀerent products or diﬀerent covariates
+(take the triggering product as a covariate). For example,
+users who purchased from the Baby|Feeding category would
+purchase products from this category again in one month.
+Later on when the baby grows up, they would purchase prod-
+ucts from Toys|Board, Card&Dice Games.
+
+5. EXPERIMENTAL RESULTS
+
+5.1 Analysis of Conditional Opportunity Model
+
+The perplexity of all conditional opportunity models in
+Section 4.1.2 are compared in Table 2. All conditional op-
+portunity models have lower perplexity than the baseline
+model Uniform. This demonstrates that conditional oppor-
+tunity models have better predictability of the time-based
+purchase probability in the data. Among all conditional op-
+
+follow−up purchases
+
+Baby|Feeding−>Baby|Feeding
+Baby|Feeding−>Baby|Bathing
+Baby|Feeding−>Apparel_&_Accessories|Bras
+Baby|Feeding−>Baby|Safety
+Baby|Feeding−>Toys|Board,_Card_&_Dice_Games
+
+e
+m
+
+i
+t
+ 
+f
+
+o
+
+ 
+
+b
+o
+r
+p
+
+0
+1
+0
+0
+
+.
+
+8
+0
+0
+0
+
+.
+
+6
+0
+0
+0
+
+.
+
+4
+0
+0
+0
+
+.
+
+2
+0
+0
+0
+
+.
+
+0
+0
+0
+0
+
+.
+
+0
+
+100
+
+200
+
+300
+
+400
+
+500
+
+days
+
+Figure 3: Density plot of the purchase time between
+diﬀerent follow-up purchases from Baby|Feeding
+
+Table 2: Perplexity of diﬀerent conditional oppor-
+tunity models in 10-fold cross validation.
+
+Data
+
+Uniform O-One O-Dest O-DestCov
+
+All purchases
+repurchases
+
+new purchases
+
+46.95
+58.99
+44.25
+
+23.75
+16.68
+26.04
+
+22.45
+14.80
+25.01
+
+18.95
+9.75
+22.48
+
+portunity models, O-DestCov achieves the lowest perplexity,
+followed by O-Dest, and O-One. O-DestCov incorporates
+related covariates in addition to ﬁtting parameters of a con-
+ditional opportunity model for each category m. It shows
+the importance of considering covariates when modeling the
+purchase time of a follow-up purchase.
+
+To further analyze the eﬀect of covariates, we compare
+the perplexity of all models in the repurchase data and the
+new purchase data in Table 2. As expected, the major gain
+is in reducing the perplexity of repurchases. More feature
+exploration would be useful to improve the prediction of new
+purchases in the future.
+
+Now we compare the estimated purchase time with the ac-
+tual time of a follow-up purchase in Table 3. All conditional
+opportunity models perform better than the baseline model
+U nif orm. O-DestCov gives the most accurate estimation of
+the purchase time, followed by O-Dest, and O-One. Accord-
+ing to MAE, the estimated purchase time from O-DestCov
+
+Table 3: Error between the estimated purchase time
+and the actual purchase time. MAE stands for mean
+absolute error. MSE stands for mean squared error.
+MAPE stands for mean absolute percentage error.
+O-DestCov
+
+Error rate
+
+Data
+
+Uniform
+159.74
+
+O-One
+105.279
+
+O-Dest
+102.617
+
+All Purchases
+
+Repurchases
+
+New Purchases
+
+MAE
+MSE
+MAPE
+MAE
+MSE
+MAPE
+MAE
+MSE
+MAPE
+
+77.695
+
+30859.346
+
+23322.373
+
+21920.462
+
+14335.505
+
+16.592
+183.337
+
+3.796
+63.7
+
+3.763
+62.119
+
+2.434
+34.536
+
+37728.853
+
+9406.591
+
+8799.832
+
+4456.393
+
+27.895
+154.244
+
+6.165
+
+114.956
+
+5.631
+
+112.042
+
+0.658
+87.736
+
+29260.204
+
+26560.746
+
+24973.753
+
+16634.239
+
+13.964
+
+3.246
+
+3.329
+
+2.847
+
+310Table 4: Conversion rate of recommendation models
+in the zero-query pull-based scenario. Numbers in
+bold are signiﬁcantly better than the corresponding
+value in baseline models.
+
+Model
+TopPop
+
+SVD
+
+SVD.util
+
+Regression.Model
+
+Conditional.Opportunity.Model
+
+Opportunity.Model
+
+Product level
+
+All purchases
+
+Repurchases
+
+CR@1
+
+0.0
+
+0.0134
+0.0287
+0.0339
+0.0160
+0.0289
+
+CR@5
+0.0155
+0.0344
+0.0369
+0.0525
+0.0282
+0.0452
+
+CR@1
+
+0.0
+
+0.0822
+0.1750
+0.2082
+0.0962
+0.1750
+
+CR@5
+0.0936
+0.2073
+0.2248
+0.3202
+0.1706
+0.2712
+
+Category level
+
+New purchases
+CR@1 CR@5
+0.0003
+0.0011
+0.0003
+0.0003
+0.0006
+0.0011
+
+0.0003
+0.0005
+
+0.0002
+
+0.0
+0.0
+
+0.0
+
+Model
+TopPop
+
+SVD
+
+SVD.util
+
+Regression.Model
+
+Conditional.Opportunity.Model
+
+Opportunity.Model
+
+All purchases
+
+Repurchases
+
+CR@1
+0.0204
+0.0577
+0.0751
+0.0999
+0.1102
+0.1313
+
+CR@5
+0.0848
+0.1688
+0.1344
+0.1792
+0.2154
+0.2345
+
+CR@1
+0.0130
+0.1309
+0.1779
+0.2330
+0.2467
+0.3091
+
+CR@5
+0.1382
+0.3267
+0.2453
+0.3646
+0.3856
+0.4495
+
+New purchases
+CR@1 CR@5
+0.0435
+0.0219
+0.0540
+0.0066
+0.0511
+0.0041
+0.0076
+0.0472
+0.0907
+0.0144
+0.0816
+0.0082
+
+is 77 days away(higher or lower) from the actual time. It
+is a decent performance given that the total time range is
+500 days. Further analysis shows that O-DestCov predicts
+more accurately in both the repurchase and the new pur-
+chase data.
+
+5.2 Analysis of Opportunity Model
+
+5.2.1 Pull-based Scenario
+
+Now we evaluate the performance of the opportunity model
+with the joint purchase probability. The conversion rate
+of diﬀerent recommendation models in the zero-query pull-
+based scenario is compared in Table 4.
+
+The opportunity model achieves higher conversion rate
+at both the product level and the category level. Further
+analysis shows that the contribution of the conditional op-
+portunity model is mainly at the category level. It is not
+surprising because the model is designed at the category
+level. Product-level models can be explored in the future.
+The key challenge is to solve the sparsity and scalability
+issues.
+
+We further analyze the performance of the conversion rate
+in diﬀerent purchase scenarios. In Table 4, we show the con-
+version rate of repurchases and new purchases. It is clear
+that the major contribution of the opportunity model is in
+the repurchase scenario. The observation is consistent with
+the evaluation of the conditional opportunity model in Sec-
+tion 5.1: the conditional opportunity model predicts more
+accurately in repurchases.
+
+5.2.2 Push-Based Scenario
+
+Now we evaluate all models in the push-based scenario. In
+the Opportunity.M odel.F iltering model, a product is rec-
+ommended only if its joint purchase probability is higher
+than the threshold. We evaluate the model with three sets
+of utility at both the product level (i.e. true positive means
+that the user purchased the exact product) and the category
+level (i.e. a true positive means that the user purchased a
+product in same category as the recommendation). The re-
+sults are shown in Table 5. There are 3,014 email oppor-
+tunities in the testing period. 55% of them have follow-up
+
+Table 5: Average utility of email recommendations
+in the push-based scenario. Coverage is the percent-
+age of emails that are sent among all possible oppor-
+tunities. Rec count is the average number of unique
+recommendations in a email when the email is sent.
+
+utility set 1
+
+uT P = 3, uF N = 0
+uF P = -1, uT N = 0
+Threshold = 0.25
+
+Product level
+
+Model
+
+TopPop
+
+SVD SVD.util Opportunity.Model Opportunity.Model
+
+Utility
+
+Coverage
+Rec count
+
+-4.994
+
+-4.862
+
+-4.768
+
+-4.810
+
+1
+5
+
+1
+5
+
+1
+5
+category level
+
+1
+5
+
+Filtering
+-0.048
+0.023
+2.432
+
+Model
+
+TopPop
+
+SVD SVD.util Opportunity.Model Opportunity.Model
+
+Utility
+
+Coverage
+Rec count
+
+-4.823
+
+-4.515
+
+-4.570
+
+-4.255
+
+1
+5
+
+1
+5
+
+1
+5
+utility set 2
+
+1
+5
+
+uT P = 10, uF N = 0
+uF P = -1, uT N = 0
+Threshold = 0.09
+
+Product level
+
+Filtering
+
+0.006
+0.023
+1.081
+
+Model
+
+TopPop
+
+SVD SVD.util Opportunity.Model Opportunity.Model
+
+Utility
+
+Coverage
+Rec count
+
+-4.983
+
+-4.621
+
+-4.363
+
+-4.477
+
+1
+5
+
+1
+5
+
+1
+5
+Category level
+
+1
+5
+
+Filtering
+-0.399
+0.180
+3.007
+
+Model
+
+TopPop
+
+SVD SVD.util Opportunity.Model Opportunity.Model
+
+Utility
+
+Coverage
+Rec count
+
+-4.514
+
+-3.667
+
+-3.819
+
+-2.951
+
+1
+5
+
+1
+5
+
+1
+5
+utility set 3
+
+1
+5
+
+uT P = 3,u F N = -1
+uF P = -1, uT N = 0
+Threshold = 0.20
+
+Product level
+
+Filtering
+
+0.282
+0.180
+1.880
+
+Model
+
+TopPop
+
+SVD SVD.util Opportunity.Model Opportunity.Model
+
+Utility
+
+Coverage
+Rec count
+
+-4.992
+
+-4.828
+
+-4.710
+
+-4.762
+
+1
+5
+
+1
+5
+
+1
+5
+Category level
+
+1
+5
+
+Filtering
+-0.066
+0.033
+2.356
+
+Model
+
+TopPop
+
+SVD SVD.util Opportunity.Model Opportunity.Model
+
+Utility
+
+Coverage
+Rec count
+
+-4.779
+
+-4.394
+
+-4.463
+
+-4.069
+
+1
+5
+
+1
+5
+
+1
+5
+
+1
+5
+
+Filtering
+
+0.015
+0.033
+1.115
+
+purchases in the following week. Among those with follow-
+up purchases, the average number of purchases is 2.227.
+
+In the ﬁrst utility set, the utility uT P for a good recom-
+mendation that the user purchases is set to 3. When the sys-
+tem shows a product and the user does not purchase it, the
+utility uF P is −1. The resulting ﬁltering threshold is 0.25. In
+this case, Opportunity.M odel.F iltering has a better utility
+than other models by ﬁltering out many false alarms. The
+average utility at the category level is higher, which is ex-
+pected. It rewards a recommendation if it matches the user’s
+purchase at the category level, which is an easier task. In
+general, the model with higher conversion rate in the pull-
+based scenario has high utility in the push-based scenario.
+In the second utility set, the utility uT P is set to 10, indi-
+cating that the user is more tolerant to bad recommenda-
+tions. Thus the threshold is lower, being 0.09. The coverage
+of Opportunity.M odel.F iltering increases while the aver-
+age utility drops. There is a tradeoﬀ between the utility
+and the recommendation coverage, which can be tuned in a
+real-world application by a user or the system designer.
+In the third utility set, uF N is set to −1. It is the penalty
+for not recommending a product that would be purchased
+
+311by the user in the following week. Thus the coverage of
+Opportunity.M odel.F iltering is higher to avoid missing good
+recommendations with the threshold being 0.02.
+It still
+achieves the highest utility among all models.
+
+6. CONCLUSION AND FUTURE WORK
+
+In this paper, we propose to develop the opportunity model
+to predict the probability of a user purchasing a product at
+a particular time. This is achieved by modeling the joint
+probability of time and product, which can be calculated
+by combining a proportional hazards model and a logistic
+regression model. The joint probability guides the system
+to make the right product recommendation at the right time.
+This is just the ﬁrst step to tackle the research problem
+of capturing the time-based recommendation opportunity.
+Besides Weibull distribution, other distributions such as Ex-
+ponential, Log-logistic, Lognormal, Generalized gamma, can
+be explored. Further improvements could be achieved with
+better covariates. More systematic approaches of discover-
+ing the triggering item could be explored. It would be helpful
+to carry out experiments with a real push-based system to
+evaluate the eﬀectiveness of the opportunity model in a real
+user study. Due to the limited number of research data avail-
+able and our own computational limits, we only learn the
+category-level conditional opportunity model, which clearly
+work well at the category level prediction. Another follow-
+up work is to evaluate this approach on a large-scale system
+to learn the product-level models, which might lead to better
+prediction at the product level.
+
+Acknowledgments
+We would like to thank shop.com for sharing the data. This
+work was funded by National Science Foundation IIS-0713111
+and IIS-0953908. Any opinions, ﬁndings, conclusions or rec-
+ommendations expressed in this paper are the authors, and
+do not necessarily reﬂect those of the sponsors.
+
+7. REFERENCES
+[1] M. Beal. Variational algorithms for approximate
+
+Bayesian inference. PhD thesis, University of London,
+2003.
+
+[2] S. Chen, D. Beeferman, and R. Rosenfeld. Evaluation
+
+metrics for language models. In DARPA Broadcast
+News Transcription and Understanding Workshop
+(BNTUW), Lansdowne, Virginia, USA, Feb. 1998.
+
+[3] P. Cremonesi, Y. Koren, and R. Turrin. Performance
+of recommender algorithms on top-n recommendation
+tasks. In Proceedings of the 4th ACM Recommender
+systems, pages 39–46, 2010.
+
+[4] C. Elkan. The foundations of cost-sensitive learning.
+
+In Proceedings of the 17th international joint
+conference on Artiﬁcial intelligence - Volume 2,
+IJCAI’01, pages 973–978, 2001.
+
+[5] N. Golbandi, Y. Koren, and R. Lempel. Adaptive
+
+bootstrapping of recommender systems using decision
+trees. In Proceedings of the fourth ACM WSDM’11.
+
+[6] Z. Huang, W. Chung, and H. Chen. A graph model for
+
+e-commerce recommender systems. J. Am. Soc. Inf.
+Sci. Technol., 55:259–274, February 2004.
+
+[7] R. Jin, L. Si, C. Zhai, and J. Callan. Collaborative
+ﬁltering with decoupled models for preferences and
+
+ratings. In Proceedings of the twelfth CIKM, pages
+309–316, New York, NY, USA, 2003. ACM.
+
+[8] Y. S. Kim, B.-J. Yum, J. Song, and S. M. Kim.
+
+Development of a recommender system based on
+navigational and behavioral patterns of customers in
+e-commerce sites. Expert Syst. Appl., 28:381–393,
+February 2005.
+
+[9] Y. Koren. Factorization meets the neighborhood: a
+
+multifaceted collaborative ﬁltering model. In
+Proceeding of the 14th ACM SIGKDD KDD’08.
+[10] Y. Koren. Collaborative ﬁltering with temporal
+
+dynamics. In KDD, 2009.
+
+[11] S. li Huang. Designing utility-based recommender
+
+systems for e-commerce: Evaluation of
+preference-elicitation methods. Electronic Commerce
+Research and Applications.
+
+[12] R. J. Mooney and L. Roy. Content-based book
+
+recommending using learning for text categorization.
+In DL ’00, pages 195–204, 2000.
+
+[13] D. Parra-Santander and P. Brusilovsky. Improving
+
+collaborative ﬁltering in social tagging systems for the
+recommendation of scientiﬁc articles. Web Intelligence
+and Intelligent Agent Technology, 1:136–142, 2010.
+
+[14] C. D. R. Regression models and life tables. Journal of
+
+the Royal Statistic Society, B(34):187–202, 1972.
+
+[15] S. Rendle, C. Freudenthaler, and L. Schmidt-Thieme.
+
+Factorizing personalized markov chains for next-basket
+recommendation. In Proceedings of the 19th WWW.
+
+[16] G. Shani, D. Heckerman, and R. I. Brafman. An
+
+mdp-based recommender system. J. Mach. Learn.
+Res., 6:1265–1295, 2005.
+
+[17] E. Shmueli, A. Kagian, Y. Koren, and R. Lempel.
+
+Care to comment?: recommendations for commenting
+on news stories. In Proceedings of the 21st
+international conference on World Wide Web, WWW
+’12, pages 429–438, New York, NY, USA, 2012. ACM.
+
+[18] J. Wang, B. Sarwar, and N. Sundaresan. Utilizing
+
+related products for post-purchase recommendation in
+e-commerce. In Proceedings of the 5th ACM
+Recommender systems.
+
+[19] J. Wang and Y. Zhang. Utilizing marginal net utility
+for recommendation in e-commerce. In Proceedings of
+the 34th ACM SIGIR’11, pages 1003–1012, 2011.
+
+[20] J. Wang, Y. Zhang, and T. Chen. Uniﬁed
+
+recommendation and search in e-commerce. In
+Information Retrieval Technology, pages 296–305.
+Springer Berlin Heidelberg, 2012.
+
+[21] J. Wang, Y. Zhang, C. Posse, and A. Bhasin. Is it
+time for a career switch? Proceedings of the 22nd
+International World Wide Web Conference, 2013.
+[22] L. J. Wei. The accelerated failure time model: A
+useful alternative to the cox regression model in
+survival analysis. Statistics in Medicine,
+11(14-15):1871–1879, 1992.
+
+[23] L. Xiang, Q. Yuan, S. Zhao, L. Chen, X. Zhang,
+
+Q. Yang, and J. Sun. Temporal recommendation on
+graphs via long- and short-term preference fusion. In
+Proceedings of the 16th ACM SIGKDD KDD’10.
+
+[24] G. Zhao, M. L. Lee, W. Hsu, and W. Chen. Increasing
+
+temporal diversity with purchase intervals. In
+Proceedings of the 35th ACM SIGIR.
+
+312

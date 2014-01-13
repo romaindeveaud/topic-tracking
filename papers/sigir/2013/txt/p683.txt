@@ -1,0 +1,1655 @@
+A Mutual Information-based Framework for the Analysis of
+
+Information Retrieval Systems
+
+Peter B. Golbus
+Javed A. Aslam
+College of Computer and Information Science
+
+{pgolbus,jaa}@ccs.neu.edu
+
+Northeastern University
+
+Boston, MA, USA
+
+ABSTRACT
+We consider the problem of information retrieval evaluation
+and the methods and metrics used for such evaluations. We
+propose a probabilistic framework for evaluation which we
+use to develop new information-theoretic evaluation metrics.
+We demonstrate that these new metrics are powerful and
+generalizable, enabling evaluations heretofore not possible.
+We introduce four preliminary uses of our framework: (1)
+a measure of conditional rank correlation, information τ ,
+a powerful meta-evaluation tool whose use we demonstrate
+on understanding novelty and diversity evaluation; (2) a
+new evaluation measure, relevance information correlation,
+which is correlated with traditional evaluation measures and
+can be used to (3) evaluate a collection of systems simultane-
+ously, which provides a natural upper bound on metasearch
+performance; and (4) a measure of the similarity between
+rankers on judged documents, information diﬀerence, which
+allows us to determine whether systems with similar perfor-
+mance are in fact diﬀerent.
+
+Categories and Subject Descriptors
+H.3.4 [Information Storage and Retrieval]: Systems
+and Software—Performance evaluation (eﬃciency and ef-
+fectiveness)
+
+General Terms
+Experimentation; Theory; Measurement
+
+Keywords
+Information Retrieval, Search Evaluation
+
+1.
+
+INTRODUCTION
+
+In order to improve search engines, it is necessary to ac-
+curately measure their current performance. If we cannot
+measure performance, how can we know whether a change
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for proﬁt or commercial advantage and that copies bear this notice and the full citation
+on the ﬁrst page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior speciﬁc permission
+and/or a fee. Request permissions from permissions@acm.org.
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+Copyright is held by the owner/author(s). Publication rights licensed to ACM.
+ACM 978-1-4503-2034-4/13/07 ...$15.00.
+
+was beneﬁcial? In recent years, much of the work on infor-
+mation retrieval evaluation has focused on user models [7,
+18] and diversity measures [1, 10, 24] which attempt to accu-
+rately reﬂect the experience of the user of a modern internet
+search engine. However, these measure are not easily gener-
+alized. In this work, we introduce a probabilistic framework
+for evaluation that encompasses and generalizes current eval-
+uation methods. Our probabilistic framework allows us to
+view evaluation using the tools of information theory [11].
+While our framework is not designed to coincide with user
+experience, it provides immediate access to a large number
+of powerful tools allowing for a deeper understanding of the
+performance of search engines.
+
+Our framework for evaluation is based on the observa-
+tion that relevance judgments can also be interpreted as
+a preference between those documents with diﬀerent rele-
+vance grades. This implies that relevance judgments can be
+treated as a retrieval system, and that evaluation can be
+considered as the “rank” correlation between systems and
+relevance judgments. To this end, we develop a probabilis-
+tic framework for rank correlation based on the expecta-
+tion of random variables, which we demonstrate can also
+be used to compute existing evaluation metrics. However,
+the true value of our framework lies in its extension to new
+information-theoretic evaluation tools.
+
+After a discussion of related work (Section 2), we intro-
+duce our framework in Section 3. In Section 4, we demon-
+strate that our framework allows for an information theoretic
+understanding of Kendall’s τ [17], information τ , which we
+use to deﬁne a conditional version of the rank correlation be-
+tween two lists conditioned on a third. In Section 5, we de-
+ﬁne a new evaluation measure based on our framework: rel-
+evance information correlation. We validate our measure by
+showing that it is highly correlated with existing measures
+such as average precision (AP) and normalized discounted
+cumulative gain (nDCG). As a demonstration of the versa-
+tility of our framework when compared to, for example, user
+models, we show that our measure can be used to evaluate a
+collection of systems simultaneously (Section 6), creating an
+upper bound on the performance of metasearch algorithms.
+Finally, in Section 7, we introduce information diﬀerence, a
+powerful new tool for evaluating the similarity of retrieval
+systems beyond simply comparing their performance.
+
+This material is based upon work supported by the Na-
+IIS-1256172.
+tional Science Foundation under Grant No.
+Any opinions, ﬁndings and conclusions or recommendations
+expressed in this material are those of the author(s) and
+do not necessarily reﬂect the views of the National Science
+Foundation (NSF).
+
+6832. RELATED WORK
+
+Search systems are typically evaluated against test collec-
+tions which consist of a corpus of documents, a set of top-
+ics, and relevance assessments—whether a subset of those
+documents are relevant with respect to each topic.1 For
+example, the annual, NIST-sponsored Text REtrieval Con-
+ference (TREC) creates test collections commonly used in
+academic research. The performance of systems is assessed
+with regards to a speciﬁc task. A traditional search task is
+to attempt to rank all relevant documents above any non-
+relevant documents. For this task, systems are evaluated in
+terms of the average trade-oﬀ between their precision and
+recall with respect to multiple topics. For a given topic, Let
+gi ∈ {0, 1} be the relevance grade of the document at rank
+i, and let R be the number of relevant documents in the
+collection. At rank k,
+
+gi
+
+k(cid:80)
+k(cid:80)
+
+i=1
+k
+
+gi
+
+precision@k =
+
+recall@k =
+
+i=1
+R
+
+(1)
+
+(2)
+
+The trade-oﬀ between the two is measured by average preci-
+sion, which can be interpreted as the area under the precision-
+recall curve.
+
+∞(cid:80)
+
+gi × precision@i
+
+AP =
+
+i=1
+
+R
+
+(3)
+
+Average precision does not include information about docu-
+ment quality and degrees of relevance, and is an inherently
+recall-oriented measure. It is therefore not suitable for eval-
+uating commercial web search engines.
+
+With the growth of the World Wide Web, test collec-
+tions began to include graded, non-binary relevance judg-
+ments, e.g. G = {non-relevant, relevant, highly relevant}
+or G = {0, . . . , 4}. To make use of these graded assess-
+ments, J¨arvelin and Kek¨al¨ainen developed normalized dis-
+counted cumulative gain (nDCG) [15]. nDCG also has the
+advantage that it can be evaluated at arbitrary ranks, and
+can therefore be used for precision-oriented tasks like web
+search.
+
+Unlike average precision, which has a technical interpre-
+tation, nDCG can be best understood in terms of a model
+of a hypothetical user. In this model, a user will read the
+ﬁrst k documents in a ranked list, deriving utility from each
+document. The amount of utility is proportional to the doc-
+ument’s relevance grade and inversely proportional to the
+rank at which the document is encountered. We ﬁrst deﬁne
+discounted cumulative gain (DCG).
+
+be computed. Normalization is performed with regard to an
+ideal ranked list. If DCG(cid:48)@k is the maximum possible DCG
+of any ranked list of documents in the collection then
+
+nDCG@k =
+
+DCG@k
+DCG(cid:48)@k
+
+(5)
+
+However, one does not always know how many documents
+are relevant at each level, and therefore the ideal list used
+for normalization is only an approximation. Moﬀat and Zo-
+bel [18] introduced a measure, rank-biased precision (RBP),
+that addresses this issue.
+In RBP, the probability that a
+user will read the document at rank k is drawn from a geo-
+metric distribution, whose parameter, β ∈ [0, 1), models the
+user’s persistence. Given a utility function u : G → [0, 1],
+commonly deﬁned as
+
+u(g) =
+
+2g − 1
+
+2d
+
+(6)
+
+where d is the maximum possible relevance grade, RBP is
+deﬁned as the expected utility of a user who browses accord-
+ing to this model.
+
+RBP = (1 − β)
+
+u(gi) × βi−1
+
+(7)
+
+i=1
+
+Since RBP is guaranteed to be in the range [0,1) for any
+topic and β, it does not require normalization.
+
+Craswell et al. [12] introduced the Cascade model of user
+behavior. In this model, a user is still assumed to browse
+documents in order, but the probability that a user will view
+a particular document is no longer assumed to be indepen-
+dent of the documents that were viewed previously, i.e. a
+user is not assumed to stop at a particular rank, or at each
+rank with some probability. Instead, the user is assumed to
+stop after ﬁnding a relevant document. This implies that
+if a user reaches rank k, then all of the k − 1 documents
+ranked before it were non-relevant. Craswell et al. demon-
+strated empirically that this model corresponds well to ob-
+served user behavior in terms of predicting the clickthrough
+data of a commercial search engine.
+
+Chapelle et al. [7] developed an evaluation measure, ex-
+pected reciprocal rank (ERR), based on the Cascade model.
+Let Ri denote the probability that a user will ﬁnd the doc-
+ument at rank i to be relevant. Then in the Cascade model,
+the likelihood that a user will terminate his or her search at
+rank r is
+
+∞(cid:88)
+
+r−1(cid:89)
+
+i=1
+
+Rr
+
+(1 − Ri).
+
+If we interpret the previously deﬁned utility function (Equa-
+tion 6) as the probability that a user will ﬁnd a document
+relevant, i.e. Ri = u(gi), then we can computed the ex-
+pected reciprocal rank at which a user will terminate his or
+her search as
+
+∞(cid:88)
+
+r=1
+
+r−1(cid:89)
+
+i=1
+
+1
+r
+
+Rr
+
+(1 − Ri).
+
+(8)
+
+(9)
+
+DCG@k =
+
+2gi − 1
+log2(i + 1)
+
+(4)
+
+ERR =
+
+k(cid:88)
+
+i=1
+
+Since the range of DCG will vary from topic to topic, it is
+necessary to normalize these scores so that an average can
+1For historical reasons, the set of relevance assessments is
+often referred to as a QREL.
+
+In this work, we propose an alternative, information-theoretic
+
+framework for evaluation. The ﬁrst step is to reformulate
+these measures as the expected outcomes of random exper-
+iments. Computing evaluation measures in expectation is
+
+684not uncommon in the literature, and we are not the ﬁrst to
+suggest that reformulating an evaluation measure as an ex-
+pectation allows for novel applications. For example, Yilmaz
+and Aslam [30] formulated average precision as the expec-
+tation of the following random experiment:
+
+1. Pick a random relevant document,
+
+2. Pick a random document ranked at or above the rank
+
+of the document selected in step 1.
+
+3. Output 1 if the document from step 2 is relevant, oth-
+
+erwise output 0.
+
+Their intention was to accurately estimate average precision
+while collecting fewer relevance judgments (a process also
+applied to nDCG [32]). However, this formulation led to new
+uses, such as deﬁning an information retrieval-speciﬁc rank
+correlation measure, τAP [31], and a variation of average
+precision for graded relevance judgments, Graded Average
+Precision (GAP) [21].
+
+Our work uses pairwise document preferences rather than
+absolute relevance judgments. The use of preferences is
+somewhat common in IR. For example, many learning-to-
+rank algorithms, such as LambdaMart [3] and RankBoost [13],
+use pairwise document preferences in their objective func-
+tions. Carterette et al. [4, 5] explored the collection of prefer-
+ence judgments for evaluation, showing that they are faster
+to collect and have lower levels of inter-assessor disagree-
+ment. More recently, Chandar and Carterette [6] crowd-
+sourced the collection of conditional document preferences
+to evaluate the standard assumptions underlying diversity
+evaluation, for example that users always prefer novel doc-
+uments. Relative document preferences can also be inferred
+from the clickthrough data collected in the logs of commer-
+cial search engines [16]. These preferences can be used for
+evaluation without undertaking the expense of collecting rel-
+evance judgments from assessors.
+
+3. A PROBABILISTIC FRAMEWORK FOR
+
+EVALUATION
+
+Mathematically, one can view the search system as pro-
+viding a total ordering of the documents ranked and a partial
+ordering of the entire collection, where all ranked documents
+are preferred to unranked documents but the relative prefer-
+ence among the unranked documents is unknown. Similarly,
+one can view the relevance assessments as providing a par-
+tial ordering of the entire collection:
+in the case of binary
+relevance assessments, for example, all judged relevant docu-
+ments are preferred to all judged non-relevant and unjudged
+documents, but the relative preferences among the relevant
+documents and among the non-relevant and unjudged doc-
+uments is unknown. Thus, mathematically, one can view
+retrieval evaluation as comparing the partial ordering of the
+collection induced by the search system with the partial or-
+dering of the collection induced by the relevance assessments.
+To formalize and instantiate a framework for comparing
+such partial orderings, consider the simplest case where we
+have two total orderings of objects, i.e., where the entire
+“collection” of objects is fully ranked in both “orderings.”
+While such a situation does not typically arise in search sys-
+tem evaluation (since not all documents are ranked by the
+retrieval system nor are they fully ranked by relevance as-
+sessments), it does often arise when comparing the rankings
+
+of systems induced by two (or more) evaluation metrics; here
+Kendall’s τ is often the metric used to compare these (total
+order) rankings.
+
+In what follows, we deﬁne a probabilistic framework within
+which to compare two total orderings, and we show how tra-
+ditional metrics (such as Kendall’s τ ) are easily cast within
+this framework. The real power of such a framework is
+shown in subsequent sections: (1) the framework can be
+easily generalized to handle the comparison of two partial
+orderings, such as arise in search system evaluation, and
+(2) well-studied, powerful, and general information-theoretic
+metrics can be developed within this generalized framework.
+
+Consider two total orderings of n objects. There are (cid:0)n
+(cid:1)
+
+(unordered) pairs of such objects, and a pair is said to be
+concordant if the two orderings agree on the relative rankings
+of the objects and discordant if the two orderings disagree.
+Let c and d be the number of concordant and discordant
+pairs, respectively. Then Kendall’s τ is deﬁned as follows:
+
+2
+
+c − d
+c + d
+
+.
+
+τ =
+
+(10)
+
+If we let C and D denote the fraction of concordant and
+discordant pairs then Kendall’s τ is deﬁned as
+
+τ = C − D.
+
+(cid:1) if there are ties.2
+
+2
+
+Note that c + d (cid:54)=(cid:0)n
+space. Let our sample space Ω be all possible 2 ·(cid:0)n
+
+To deﬁne a probabilistic framework, we must specify three
+things: (1) a sample space of objects, (2) a distribution over
+this sample space, and (3) random variables over this sample
+
+(cid:1) ordered
+
+(11)
+
+pairs of distinct objects, and consider a uniform distribution
+over this sample space. For a given ranking R, deﬁne a
+random variable XR : Ω → {−1, +1} that outputs +1 for
+any ordered pair concordant with R and −1 for any ordered
+pair discordant with R.
+
+2
+
+(cid:40)
+
+XR [(di, dj)] =
+
+if di appears before dj in R.
+
+1
+−1 otherwise.
+
+(12)
+
+We thus have a well-deﬁned random experiment: draw an
+ordered pair of objects at random and output +1 if that or-
+dered pair agrees with R’s ranking and −1 otherwise. Since
+all ordered pairs of objects are considered uniformly, the
+expected value E[XR] of this random variable is zero.
+
+Given a second ranked list S, one can similarly deﬁne an
+associated random variable XS. Now consider the random
+experiment of multiplying the two random variables: the
+product XR · XS will be +1 precisely when the pair is con-
+cordant—i.e. both lists agree that the ordering of the objects
+is correct (+1) or incorrect (−1), and the product will be −1
+when the pair is discordant—i.e. the lists disagree. In this
+probabilistic framework, Kendall’s τ is the expected value
+
+2Kendall deﬁned two means by which τ can account for ties,
+depending on the desired behavior. Imagine comparing two
+ranked lists, one of which is almost completely composed of
+ties. τA, deﬁned above, approaches 1. τB includes the num-
+ber of ties in the denominator, and therefore approaches
+0. We believe that the former approach is appropriate in
+this context. Since QRELs are almost exclusively composed
+of ties (recall that all pairs of unjudged documents in the
+corpus are considered to be tied), using the latter would
+mean that eﬀect of the relatively rare meaningful compar-
+isons would be negligible.
+
+685of the product of these random variables:
+
+τ = E[XR · XS].
+
+(13)
+
+The real power of this framework is in the deﬁnition of
+these random variables: (1) the ability to generalize them to
+compare partial orderings as arise in system evaluation, and
+(2) the ability to measure the correlation of these random
+variables using information-theoretic techniques.
+
+4.
+
+INFORMATION-THEORETIC RANK
+CORRELATION
+
+In Section 3, we deﬁned Kendall’s τ as the expected prod-
+uct of random variables. The following theorem allows us to
+restate Kendall’s τ equivalently as the mutual information
+between the random variables.
+
+Theorem 1. I(XR; XS) = 1+τ
+2
+
+log(1+τ )+ 1−τ
+
+2
+
+log(1−τ ).
+
+(For a proof of Theorem 1, see Appendix). Unlike Kendall’s
+τ , the mutual information between ranked lists ranges from
+0 on lists that are completely uncorrelated to 1 on lists that
+are either perfectly correlated or perfectly anti-correlated.
+
+If we restrict our attention to pairs of lists that are not
+anti-correlated, then the relationship is bijective. Given this
+fact, we deﬁne a variant of Kendall’s τ , information τ :
+
+τI (R, S) = I(XR; XS)
+
+(14)
+
+where XR is the ranked list random variable deﬁned in Equa-
+tion 12 observed with respect to the uniform probability
+distribution over all pairs of distinct objects. By refram-
+ing Kendall’s τ equivalently in terms of mutual information,
+we immediately gain access to a large number of powerful
+theoretical tools. For example, we can deﬁne a conditional
+information τ between two lists given a third. For lists R
+and S given T ,
+
+τI (R, S | T ) = I(XR; XS | XT ).
+
+(15)
+
+Kendall’s τ can tell you whether two sets of rankings are
+similar, but it cannot tell you why. Information τ can be
+used as a meta-evaluation tool to ﬁnd the underlying cause
+of correlation between measures. We demonstrate the use
+of information τ as a meta-evaluation tool by using it to an-
+alyze measures of the diversity of information retrieval sys-
+tems. In recent years, several diversity measures (e.g. [1, 10,
+24]) have been introduced to evaluate how well systems per-
+form in response to ambiguous or underspeciﬁed queries that
+have multiple interpretations. These measures conﬂate sev-
+eral factors [14], including: a diversity model that rewards
+novelty and penalizes redundancy, and a measure of ad hoc
+performance that rewards systems for retrieving highly rel-
+evant documents. We wish to know not only whether two
+diversity measures are correlated, but also the similarity be-
+tween their component diversity models. Using Kendall’s
+τ , we can observe whether the rankings of systems by each
+measure are correlated. But even if they are correlated, this
+could still be for one of two reasons: either both the di-
+versity and the performance components evaluate systems
+similarly; or else one of the components is similar, and its
+eﬀect on evaluation is dominant. However, if the measures
+are correlated when conditioned on their underlying perfor-
+mance components, then this must be due to similarities in
+their models of diversity.
+
+Figure 1: Per-query information τ (conditional rank
+correlation) between the TREC and NTCIR gold
+standard diversity measures conditioned on their
+underlying performance measures.
+
+We measured this eﬀect on the the TREC 2011 and 2012
+Web collections [8, 9]. Note that the performance measures
+are evaluated using graded relevance, while the diversity
+measures use binary judgments for each subtopic. All eval-
+uations are performed at rank 20. Figure 1 shows the rank
+correlation between ERR-IA and D#-nDCG, the primary
+measures reported by TREC and NTCIR [26], when condi-
+tioned on their underlying performance models. Each query
+is computed separately, with each datapoint in the ﬁgure
+corresponding to a diﬀerent query. Table 1 shows the re-
+sults of conditioning additional pairs of diversity measures
+(now averaged over queries in the usual way) on their per-
+formance models. The results in Figure 1 are typical of all
+pairs of measures on a per-query basis.
+
+Our results conﬁrm that while diversity measures are very
+highly correlated, most of this correlation disappears when
+one conditions on the underlying performance model. This
+indicates that most of the correlation is due to the similar-
+ity between the performance components and not the di-
+versity components. For example, in TREC 2010, ERR-IA
+and α-nDCG have an information τ of almost 0.9. How-
+ever, when conditioned on ERR, the similarity falls to only
+0.25. This means that while these two measures are mostly
+ranking systems for the same reason, that reason is simply
+ERR. However, of the 0.9 bits that are the same, 0.25 are
+due to some factor other than ERR. This other factor must
+presumably be the similarity in their diversity models.
+
+686TREC 2010 TREC 2011
+
+τI (ERR-IA ; α-nDCG)
+τI (ERR-IA ; α-nDCG | nDCG)
+τI (ERR-IA ; α-nDCG | ERR)
+τI (ERR-IA ; α-nDCG | nDCG, ERR)
+τI (ERR-IA ; D#-nDCG)
+τI (ERR-IA ; D#-nDCG | nDCG)
+τI (ERR-IA ; D#-nDCG | ERR)
+τI (ERR-IA ; D#-nDCG | nDCG, ERR)
+
+0.8290
+
+0.4860
+
+0.2499
+
+0.2451
+
+0.6390
+
+0.3026
+
+0.1222
+
+0.1239
+
+0.8375
+
+0.4434
+
+0.3263
+
+0.2805
+
+0.5545
+
+0.1728
+
+0.1442
+
+0.1003
+
+Table 1: TREC 2010 and 2011 information τ (condi-
+tional rank correlation) between diversity measures
+conditioned on ad hoc performance measures.
+
+5. EVALUATION MEASURE
+
+In this section, we demonstrate an extension of our prob-
+abilistic framework for evaluation to measuring the corre-
+lation between a system and the incomplete ranking gener-
+ated by a set of relevance judgments. This allows us to de-
+ﬁne an information-theoretic evaluation measure, relevance
+information correlation. While our measure has novel appli-
+cations, we will demonstrate that the evaluations produced
+are consistent with those of existing measures.
+
+To compute mutual information, we must deﬁne a sam-
+ple space, a probability distribution, and random variables.
+Let the sample space, Ω = {(di, dj)}, be the set of all or-
+dered pairs of judged documents. This means that we are
+ignoring unjudged documents, rather than considering them
+non-relevant. This is equivalent to computing an evaluation
+measure on the condensed list [23] created by removing all
+non-judged documents from the list. We deﬁne the proba-
+bility distribution in terms of the QREL to ensure that all
+ranked lists will be evaluated using the same random experi-
+ment. Let P = U|I(gi(cid:54)=gj ), where gi represents the relevance
+grade of document di, be the uniform probability distribu-
+tion over all pairs of documents whose relevance grades are
+not equal. We deﬁne a QREL variable Q over ordered pairs
+of documents as
+
+(cid:40)
+
+Q [(di, dj)] =
+
+1 if gi > gj
+0 otherwise.
+
+(16)
+
+Note that this deﬁnition can be applied to both graded and
+binary relevance judgments.
+
+We now turn our attention to deﬁning a ranked list ran-
+dom variable over ordered pairs of documents (di, dj).
+If
+both document di and dj appear in the ranked list, than
+our output can simply indicate whether di was ranked above
+dj. If document di appears in the ranked list and dj does
+not, then we will consider di as having been ranked above
+dj, and vice versa. If neither di nor dj is ranked, we will
+output a null value. If we were to instead restrict our at-
+tention only to judged document pairs where at least one
+document is ranked, then a ranked list consisting of a single
+relevant document followed by some number of non-relevant
+documents would have perfect mutual information with the
+QREL—all of the ranked relevant documents appear before
+all of the ranked non-relevant documents. However, this
+system must be penalized for preferring all of the ranked
+non-relevant documents to all of the unranked relevant doc-
+uments. If we instead use a null value, our example ranked
+
+list would almost always output null. This behavior would
+be independent of the QREL, meaning the two variables will
+have almost no mutual information. In eﬀect, the null value
+creates a recall component for our evaluation measure; no
+system can have a large mutual information with the QREL
+unless it retrieves most of the relevant documents.
+
+Another problem we must consider is that mutual infor-
+mation is maximized when two variables are completely cor-
+related or completely anti-correlated. Consider an example
+ranked list consisting of a few non-relevant documents fol-
+lowed by several relevant documents and then many more
+non-relevant documents. Since this example ranked list will
+disagree with the QREL on almost all document pairs, its
+random variable will have a very high mutual information
+with the QREL variable. The system is eﬀectively being
+rewarded for ﬁnding the subset of non-relevant documents
+that happen to be present in the QREL. To address this,
+we truncate the list at the last retrieved relevant document
+prior to evaluation.
+
+Let ri represent the rank of document di in the list S.
+
+Then the ranked list variable RS is deﬁned as
+
+1
+
+RS [(di, dj)] =
+
+0
+−1 otherwise.
+
+if ri < rj
+if neither di nor djwere retrieved
+
+(17)
+
+We deﬁne our new measure, Relevance Information Cor-
+relation, as the mutual information between the QREL vari-
+able Q and the truncated ranked list variable R
+
+RIC(System) = I(RSystem; Q).
+
+(18)
+
+RIC is computed separately for each query, and then aver-
+aged, as with mean average precision.
+
+In order to compute RIC we must estimate the joint prob-
+ability distribution of document preferences over Q and R.
+This could be done in various ways. In this work, we use
+the maximum likelihood estimate computed separately for
+each query. Since the MLE requires a large number of ob-
+servations, RIC is only accurate for recall-oriented evalu-
+ation.
+In future work, we intend to explore other means
+of estimating P (Q, R) that will allow RIC to be used for
+precision-oriented evaluation as well.
+
+We also note that RIC has no explicit rank component,
+and would therefore seem to treat all relevant documents
+equally independent of the rank at which they were ob-
+served. However, there is an implicit rank component in that
+a relevant document that is not retrieved early in the list
+must be incorrectly ranked below many non-relevant docu-
+ments. This argument is similar in spirit to Bpref [2].
+
+Our measure is quite novel in its formulation, and makes
+many non-standard assumptions about information retrieval
+evaluation. Therefore it is necessary to validate experimen-
+tally that our measure prefers the same retrieval systems as
+existing measures. Note that for two evaluation measures to
+be considered compatible, it is suﬃcient that they rank sys-
+tems in the same relative order; it is not necessary that they
+always assign systems similar absolute scores. For example,
+a system’s nDCG is often higher than its average precision.
+To show that RIC is consistent with AP and nDCG, we
+computed the RIC, AP, and nDCG of all systems submit-
+ted to TRECs 8 and 9. Figure 2 shows the output of RIC
+plotted against AP (top) and nDCG (bottom) on TRECs 8
+(left) and 9 (right) [28, 29]. TREC 8 uses binary relevance
+
+687Figure 2: Correlation between RIC and AP (top) and nDCG (bottom). TREC 8 (left) uses binary relevance
+judgments. TREC 9 (right) uses graded relevance judgments.
+
+TREC 8 TREC9
+
+(G)AP
+
+nDCG
+
+MI
+
+0.716
+
+0.713
+
+0.719
+
+0.648
+
+0.757
+
+0.744
+
+Table 2: Discriminative power of (graded) AP and
+nDCG vs. RIC
+
+judgments. TREC 9 uses graded relevance judgments, re-
+quiring the use of graded average precision. Inset into each
+plot is the output of the measures on the top ten systems.
+For each experiment, we report the Kendall’s τ and Spear-
+man’s ρ [27] rank correlations for all systems, and for the
+top ten systems. With Kendall’s τ values of at least 0.799
+on all systems and 0.644 on top ten systems, the ranking of
+systems by RIC is still highly correlated with those of both
+AP and nDCG. However, RIC is not as highly correlated
+with either AP or nDCG as AP and nDCG are with each
+other. Note that the correlation between RIC and GAP on
+TREC 9 is highly monotonic, even if is not particularly lin-
+ear. This implies that the two measures do rank systems in
+a consistent relative order, even if RIC is a biased estimator
+of GAP.
+
+To further validate our measure, we also compute the dis-
+criminative power [22] of the various measures. Discrimina-
+tive power is a widely used tool for evaluating a measure’s
+sensitivity i.e. how often diﬀerences between systems can be
+
+detected with high conﬁdence. A high sensitivity can be
+seen as a necessary, though not suﬃcient, condition for a
+good evaluation measure. Discriminative power is deﬁned
+as the percentage of pairs of runs that are found to be sta-
+tistically signiﬁcantly diﬀerent by some signiﬁcance test. As
+per Sakai, we use a two-tailed paired bootstrap test with
+1000 bootstrap samples per pair of systems. Our results are
+displayed in Table 2. As measured by discriminatory power,
+we see that RIC is at least as sensitive, if not more so, than
+AP and nDCG.
+
+6. UPPER BOUND ON METASEARCH
+
+In Section 5, we deﬁned an evaluation measure in terms of
+mutual information. One advantage of this approach is that
+collections of systems can be evaluated directly by consid-
+ering the output of their random variables jointly, without
+their needing to be combined. For a collection of systems,
+denoted S1 through Sn, the relevance information correla-
+tion can be deﬁned as
+
+RIC(S1, . . . , Sn) = I(RS1 , . . . , RSn ; Q)
+
+(19)
+
+In this section, we will show that this produces a natural
+upper bound on metasearch performance that is consistent
+with other upper bounds appearing in the literature.
+
+We compare our upper bound against those of Montague [19].
+
+Montague describes metasearch algorithms as sorting func-
+tions whose comparators, as well as the documents to be
+sorted, are deﬁned in terms of collections of input systems.
+
+688By also using the QREL as input, these algorithms can es-
+timate upper bounds on metasearch performance. These
+bounds range from the ideal performance that cannot pos-
+sibly be exceeded by any metasearch algorithm, to descrip-
+tions of reasonable metasearch behavior that should be sim-
+ilar to the performance of any quality metasearch algorithm.
+
+Montague deﬁnes the following upper bounds on metasearch:
+
+1. Naive: Documents are sorted by comparison of rele-
+vance judgments, i.e. the naive upper bound is cre-
+ated by returning all relevant documents returned by
+any system in the collection above any non-relevant
+document. Relevant documents not retrieved by any
+system are not ranked.
+
+2. Pareto: If document A is ranked above document B by
+all systems, then document A is considered “greater”
+than document B. Otherwise, the documents are sorted
+by comparison of relevance judgments.
+
+3. Majoritarian: If document A is ranked above docu-
+ment B by at least half of the systems, then document
+A is considered “greater” than document B. Otherwise,
+the documents are sorted by comparison of relevance
+judgments.
+
+We will compare our direct joint evaluation with these up-
+per bounds, and several metasearch algorithms commonly
+used as baselines in the IR literature: the CondorcetFuse
+metasearch algorithm [20], and the comb family of metasearch
+algorithms [25].
+
+Figure 3: RIC of systems output by metasearch
+algorithms (Fusion System) versus RIC of systems
+computed directly (S1, . . . , S10) without combining.
+
+We examined the direct evaluation and metasearch per-
+formance of collections of ten randomly selected systems.
+Experiments were performed on TREC 8 and 9, with both
+binary and graded relevance judgments. To conserve space,
+we only show the results from TREC 8. The results from
+TREC 9 were highly similar, both when using binary and
+graded relevance judgments.
+
+Figure 3 shows the RIC of the system output by a metasearch
+
+algorithm plotted against the joint RIC of the input sys-
+tems, and Table 3 shows various measures of their corre-
+lation. Montague found that combANZ is inferior to Con-
+dorcetFuse and combMNZ, CondorcetFuse and combMNZ
+
+TREC 8
+
+τ
+
+ρ
+
+RMSE
+
+ANZ
+
+MNZ
+
+0.221
+
+0.330
+
+0.481
+
+0.587
+
+0.764
+
+0.351
+
+Condorcet
+
+0.519
+
+0.689
+
+0.362
+
+Majoritarian
+
+0.552
+
+0.735
+
+0.340
+
+Pareto
+
+Naive
+
+0.657
+
+0.836
+
+0.044
+
+0.788
+
+0.931
+
+0.039
+
+Table 3: Correlation between joint distribution and
+metasearch algorithms (Kendall’s τ , Spearman’s ρ,
+root mean square error).
+
+perform comparably to the Majoritarian bound, and the
+Naive bound is not appreciably better than the Pareto bound.
+If direct evaluation and the Naive bound are both reason-
+able estimates of the actual upper bound, then these re-
+sults should be conﬁrmed by Figure 3 and Table 3, as in-
+deed they are. Note that there is almost no correlation be-
+tween the joint evalution and the weakest metasearch al-
+gorithm, combANZ: combANZ does not approximate the
+upper bound on metasearch. The correlation improves as
+the quality of the metasearch algorithm improves, and it
+does so in a manner consistent with Montague. The cor-
+relations between the joint evaluation and the output of
+combMNZ, CondorcetFuse, and the Majoritarian bound are
+similar; while they are still biased as estimators, the corre-
+lation is beginning to approach monotonicity. Finally, with
+a root mean square error of 0.039, the joint evaluation esti-
+mation of the upper bound is essentially identical to that of
+the Naive upper bound. If the Naive upper bound is a rea-
+sonable estimate of the upper bound on metasearch perfor-
+mance, then so is the joint evaluation of the input systems.
+
+7.
+
+INFORMATION DIFFERENCE
+
+In this section, we introduce a novel application of our
+probabilistic framework. Imagine that you are attempting
+to improve an existing ranker. On what basis do you decide
+whether or not your changes are beneﬁcial? One typically
+evaluates both systems on a number of queries, and mea-
+sures the diﬀerence in average performance. If one system
+outperforms the other, whether you have made an improve-
+ment is clear. But what happens when the systems perform
+similarly? It could be that your new system is essentially
+unchanged from your old system, but it is also possible that
+the two systems chose highly diﬀerent document and just
+happened to have very similar evaluation scores. In the lat-
+ter case, it may be possible to create a new, better system
+based on a combination of the two existing systems.
+
+We propose to measure the magnitude of the diﬀerence
+between systems in their ranking of documents for which
+we have relevance information, rather than the magnitude
+of the diﬀerence between their performance. We denote this
+new quantity as the information diﬀerence between systems.
+Our deﬁnition of information diﬀerence is inspired by the
+Boolean Algebra symmetric diﬀerence operator as applied
+to information space (see Figure 4).
+
+id(S1, S2) = I(S1; Q | S2) + I(S2; Q | S1)
+
+(20)
+
+689technology. We can therefore conclude that information dif-
+ference is able to determine whether systems with the same
+underlying performance are in fact similar, as desired.
+
+Rank
+
+System 1
+
+System 2
+
+1
+2
+3
+4
+5
+
+28
+29
+30
+31
+32
+
+UB99T
+unc8al32
+fub99tt
+nttd8al
+ibmg99a
+
+UB99SW
+unc8al42
+fub99tf
+nttd8alx
+ibmg99b
+...
+cirtrc82
+
+isa25t
+CL99SD CL99SDopt2
+ok8amxc
+tno8d4
+uwmt8a2
+
+ok8alx
+MITSLStd
+uwmt8a1
+
+id
+
+0.010
+0.012
+0.017
+0.023
+0.027
+
+0.084
+0.086
+0.086
+0.088
+0.089
+
+|∆ AP|
+0.005
+0.002
+0.000
+0.002
+0.012
+
+0.004
+0.000
+0.006
+0.016
+0.002
+
+Table 4: The systems from TREC 8 were binned by
+average precision. Information diﬀerence and ∆ AP
+were computed for all system pairs within each bin.
+Sorting by information diﬀerence, both systems in
+the ﬁrst 27 pairs were submitted by the same group.
+
+8. CONCLUSION
+
+In this work, we developed a probabilistic framework for
+the analysis of information retrieval systems based on the
+correlation between a ranked list and the preferences induced
+by relevance judgments. Using this framework, we devel-
+oped powerful information theoretic tools for better under-
+standing information retrieval systems. We introduced four
+preliminary uses of our framework: (1) a measure of condi-
+tional rank correlation, information τ , which is a powerful
+meta-evaluation tool whose use we demonstrated on under-
+standing novelty and diversity evalution; (2) a new evalu-
+ation measure, relevance information correlation, which is
+correlated with traditional evaluation measures and can be
+used to (3) evaluate a collection of systems simultaneously,
+which provides a natural upper bound on metasearch perfor-
+mance; and (4) a measure of the similarity between rankers
+on judged documents, information diﬀerence, which allows
+us to determine whether systems with similar performance
+are actually diﬀerent.
+
+Our framework is based on the choice of sample space,
+probability distribution, and random variables. Throughout
+this work, we only used a uniform distribution on appropri-
+ate pairs of documents. However, not all document pairs
+are equal. The use of additional distributions is an imme-
+diate avenue for improvement that we intend to explore in
+future work. For example, a geometric distribution may be
+employed to force our evaluation tools to concentrate their
+attention at the top of a ranked list.
+
+The primary limitation of our evaluation measure as im-
+plemented in this work is that it is only applicable to recall-
+oriented retrieval tasks. In future work, we intend to develop
+a precision-oriented version that is applicable to web search.
+Given such a measure, judgments can be combined in the
+way systems were in our upper bound on metasearch. In that
+way, a small number of expensive to produce nominal rel-
+evance judgments, a somewhat larger number of somewhat
+less expensive preference judgments, and a gold-stander ranker
+could all be used simultaneously to evaluate systems.
+
+Figure 4: Information diﬀerence corresponds to the
+symmetric diﬀerence between the intersections of
+the systems with the QREL in information space
+(red portion of the Venn diagram).
+
+As a preliminary validation of information diﬀerence, we
+analyzed the change in AP and information diﬀerence be-
+tween pairs of systems submitted to TREC 8, selected at
+random. We expect the two to be somewhat directly cor-
+related, since, in general, if two systems rank documents
+similarly, we would expect them to have similar AP. How-
+ever, we expect that they will not be highly correlated, since
+we believe that information diﬀerence is much more infor-
+mative. Our intuition is supported by Figure 5, which shows
+the magnitude of the change in AP on the horizontal axis,
+and the information diﬀerence on the vertical axis.
+
+Figure 5: Scatter plot of information diﬀerence and
+the magnitude of change in AP of random pairs of
+TREC 8 systems.
+
+To demonstrate the utility of information diﬀerence, we
+sorted all the systems submitted to TREC 8 by AP and
+separated them into twenty equal-sized bins. By construc-
+tion, each bin contained systems with small diﬀerences in
+performance. Our goal is to distinguish between similar and
+dissimilar systems within each bin. To this end, all systems
+within each bin were compared with one other (see Table 4).
+When the system pairs were sorted by their information dif-
+ference, both systems in the ﬁrst 27 pairs were submitted
+by the same group, whereas sorting by |∆ AP| produced no
+discernible pattern.
+It is reasonable to assume that these
+systems were diﬀerent instantiations of the same underlying
+
+System 1System 2QREL690Finally, we intend to explore the application of informa-
+tion diﬀerence to the understanding of information retrieval
+models. For example, BM25 and Language Models have long
+been used as baselines in information retrieval experiments.
+On the surface, these two models appear to be completely
+diﬀerent. And yet, the two share deep theoretical connec-
+tions [33]. Using information diﬀerence, we can determine
+whether their theoretical similarities outweigh their superﬁ-
+cial diﬀerences in terms of how they rank documents.
+
+9. REFERENCES
+[1] Rakesh Agrawal, Sreenivas Gollapudi, Alan Halverson,
+
+and Samuel Ieong. Diversifying search results. In
+Proceedings of the Second ACM International
+Conference on Web Search and Data Mining, WSDM
+’09, pages 5–14, New York, NY, USA, 2009. ACM.
+
+[2] Chris Buckley and Ellen M. Voorhees. Retrieval
+
+evaluation with incomplete information. In
+Proceedings of the 27th annual international ACM
+SIGIR conference on Research and development in
+information retrieval, SIGIR ’04, 2004.
+
+[3] Christopher J.C. Burges. From ranknet to lambdarank
+
+to lambdamart: An overview. Technical Report
+MSR-TR-2010-82, Microsoft Research, 2010.
+
+[4] Ben Carterette and Paul N. Bennett. Evaluation
+
+measures for preference judgments. In SIGIR, 2008.
+
+[5] Ben Carterette, Paul N. Bennett, David Maxwell
+Chickering, and Susan T. Dumais. Here or there:
+preference judgments for relevance. In Proceedings of
+the IR research, 30th European conference on
+Advances in information retrieval, ECIR’08, 2008.
+
+[6] Praveen Chandar and Ben Carterette. Using
+
+preference judgments for novel document retrieval. In
+Proceedings of the 35th international ACM SIGIR
+conference on Research and development in
+information retrieval, SIGIR ’12, 2012.
+
+[7] Olivier Chapelle, Donald Metlzer, Ya Zhang, and
+
+Pierre Grinspan. Expected reciprocal rank for graded
+relevance. In Proceedings of the 18th ACM conference
+on Information and knowledge management, CIKM
+’09, pages 621–630, New York, NY, USA, 2009. ACM.
+[8] Charles L. A. Clarke, Nick Craswell, Ian Soboroﬀ, and
+
+Gordon V. Cormack. Overview of the TREC 2010
+Web Track. In 19th Text REtrieval Conference,
+Gaithersburg, Maryland, 2010.
+
+[9] Charles L. A. Clarke, Nick Craswell, Ian Soboroﬀ, and
+Ellen M. Voorhees. Overview of the TREC 2011 Web
+Track. In 20th Text REtrieval Conference,
+Gaithersburg, Maryland, 2011.
+
+[10] Charles L.A. Clarke, Maheedhar Kolla, Gordon V.
+Cormack, Olga Vechtomova, Azin Ashkan, Stefan
+B¨uttcher, and Ian MacKinnon. Novelty and diversity
+in information retrieval evaluation. In Proceedings of
+the 31st Annual International ACM SIGIR Conference
+on Research and Development in Information
+Retrieval, SIGIR ’08, pages 659–666, New York, NY,
+USA, 2008. ACM.
+
+[11] Thomas M. Cover and Joy A. Thomas. Elements of
+
+Information Theory. Wiley-Interscience, 1991.
+
+[12] Nick Craswell, Onno Zoeter, Michael Taylor, and Bill
+
+Ramsey. An experimental comparison of click
+position-bias models. In Proceedings of the 2008
+
+International Conference on Web Search and Data
+Mining, WSDM ’08, pages 87–94, New York, NY,
+USA, 2008. ACM.
+
+[13] Yoav Freund, Raj Iyer, Robert E. Schapire, and
+
+Yoram Singer. An eﬃcient boosting algorithm for
+combining preferences. J. Mach. Learn. Res., 4,
+December 2003.
+
+[14] Peter B. Golbus, Javed A. Aslam, and Charles L.A.
+Clarke. Increasing evaluation sensitivity to diversity.
+In Journal of Information Retrieval, To Appear.
+
+[15] Kalervo J¨arvelin and Jaana Kek¨al¨ainen. Cumulated
+
+gain-based evaluation of IR techniques. ACM
+Transactions on Information Systems, 20(4):422–446,
+October 2002.
+
+[16] Thorsten Joachims. Optimizing search engines using
+clickthrough data. In Proceedings of the eighth ACM
+SIGKDD international conference on Knowledge
+discovery and data mining, KDD ’02, 2002.
+
+[17] M. G. Kendall. A New Measure of Rank Correlation.
+
+Biometrika, 30(1/2):81–93, June 1938.
+
+[18] Alistair Moﬀat and Justin Zobel. Rank-biased
+
+precision for measurement of retrieval eﬀectiveness.
+ACM Trans. Inf. Syst., 27(1):2:1–2:27, December 2008.
+
+[19] Mark Montague. Metasearch: Data Fusion for
+
+Document Retrieval. PhD thesis, Dartmouth College.
+Dept. of Computer Science, 2002.
+
+[20] Mark Montague and Javed A. Aslam. Condorcet
+
+fusion for improved retrieval. In Proceedings of the
+eleventh international conference on Information and
+knowledge management, CIKM ’02, 2002.
+
+[21] Stephen E. Robertson, Evangelos Kanoulas, and
+
+Emine Yilmaz. Extending average precision to graded
+relevance judgments. In Proceedings of the 33rd
+international ACM SIGIR conference on Research and
+development in information retrieval, SIGIR ’10, 2010.
+[22] Tetsuya Sakai. Evaluating evaluation metrics based on
+
+the bootstrap. In Proceedings of the 29th annual
+international ACM SIGIR conference on Research and
+development in information retrieval, SIGIR ’06, 2006.
+[23] Tetsuya Sakai. Alternatives to Bpref. In Proceedings of
+the 30th annual international ACM SIGIR conference
+on Research and development in information retrieval,
+SIGIR ’07, 2007.
+
+[24] Tetsuya Sakai and Ruihua Song. Evaluating diversiﬁed
+
+search results using per-intent graded relevance. In
+SIGIR, pages 1043–1052, 2011.
+
+[25] Joseph A. Shaw and Edward A. Fox. Combination of
+
+multiple searches. In The Second Text REtrieval
+Conference (TREC-2), pages 243–252, 1994.
+
+[26] Ruihua Song, Min Zhang, Tetsuya Sakai, Makoto P.
+
+Kato, Yiqun Liu, Miho Sugimoto, Qinglei Wang, and
+Naoki Orii. Overview of the ntcir-9 intent task. In
+Proceedings of the 9th NTCIR Workshop, Tokyo,
+Japan, 2011.
+
+[27] C. Spearman. The proof and measurement of
+
+association between two things. The American
+Journal of Psychology, 1904.
+
+[28] E. M. Voorhees and D. Harman. Overview of the
+
+eighth text retrieval conference (TREC-8). In
+Proceedings of the Eighth Text REtrieval Conference
+(TREC-8), 2000.
+
+691[29] E. M. Voorhees and D. Harman. Overview of the ninth
+
+text retrieval conference (TREC-9). In Proceedings of
+the Ninth Text REtrieval Conference (TREC-9), 2001.
+
+[30] Emine Yilmaz and Javed A. Aslam. Estimating
+average precision with incomplete and imperfect
+judgments. In Proceedings of the 15th ACM
+international conference on Information and
+knowledge management, CIKM ’06, 2006.
+
+[31] Emine Yilmaz, Javed A. Aslam, and Stephen
+
+Robertson. A new rank correlation coeﬃcient for
+information retrieval. In Proceedings of the 31st annual
+international ACM SIGIR conference on Research and
+development in information retrieval, SIGIR ’08, 2008.
+
+[32] Emine Yilmaz, Evangelos Kanoulas, and Javed A.
+Aslam. A simple and eﬃcient sampling method for
+estimating AP and nDCG. In Proceedings of the 31st
+annual international ACM SIGIR conference on
+Research and development in information retrieval,
+SIGIR ’08, 2008.
+
+[33] Chengxiang Zhai and John Laﬀerty. A study of
+
+smoothing methods for language models applied to
+information retrieval. ACM Trans. Inf. Syst.,
+22(2):179–214, April 2004.
+
+10. APPENDIX
+
+log(1−τ ).
+Theorem 1. I(XR; XS) = 1+τ
+2
+Proof. Denote XR and XS as X and Y . Consider the
+
+log(1+τ )+ 1−τ
+
+2
+
+following joint probability distribution table.
+
+Y
+−1
+a
+
+c
+
+1
+b
+
+d
+
+X
+
+−1
+1
+
+Observe that: a + b + c + d = 1; C = a + d, D = b + c, and
+therefore τ = a + d− b− c; and since document pairs appear
+in both orders, a = d and b = c.
+
+The joint probability distribution can be rewritten as fol-
+
+lows.
+
+Y
+−1
+
+C
+2
+D
+2
+
+1
+D
+2
+C
+2
+
+X
+
+−1
+1
+
+Observe that the marginal probability P (X) = P (Y ) =
+
+I(X; Y ) = KL(P (X, Y )||P (X)P (Y ))
+
+(cid:1).
+
+2 , 1
+
+2
+
+2
+
+2 , C
+
+2 + D
+
+2 + D
+
+(cid:0) C
+
+(cid:1) =(cid:0) 1
+(cid:88)
+(cid:88)
+Since P (X, Y ) =(cid:0) C
+
+=
+
+=
+
+x,y
+
+x,y
+
+p(x, y) lg
+
+p(x, y)
+p(x)p(y)
+
+p(x, y) lg p(x, y) +
+
+(cid:88)
+
+p(x, y) lg
+
+(cid:1) and P (X)P (Y ) =(cid:0) 1
+
+x,y
+
+1
+
+p(x)p(y)
+
+4 , 1
+
+4 , 1
+
+4 , 1
+
+4
+
+.
+
+(cid:1),
+
+2 , D
+
+2 , C
+
+2 , D
+
+2
+
+lg
+
+D
+2
+
++ 2 · C
+2
+
+lg 4 + 2 · D
+2
+
+lg 4
+
+I(X, Y ) = 2 · C
+2
+C
+2
+
+lg
+
+C
+2
+
++ 2 · D
+2
+D
+2
+
++ D lg
+
++ 2C + 2D
+
+= C lg
+= C lg C − C + D lg D − D + 2C + 2D
+= C lg C + D lg D + 1
+= C lg C + (1 − C) lg(1 − C) + 1
+
+Since C + D = 1 and τ = C − D, we have that τ = 2C − 1,
+C = 1+τ
+
+2 and D = 1 − C = 1−τ
+2 .
+
+In terms of C, if H2 represents the entropy of a Bernoulli
+
+random variable ,3
+
+I(X; Y ) = −H2(C) + 1
+
+(cid:18) 1 + τ
+
+(cid:19)
+
+= −H2
+
+=
+
+=
+
+=
+
+1 + τ
+
+2
+
+1 + τ
+
+2
+
+− 1 − τ
+
+2
+1 + τ
+
+2
+
++ 1
+
+2
+1 + τ
+
+1 − τ
+2
+
+2
+
++
+
+lg
+lg(1 + τ ) − 1 + τ
+2
+
+1 − τ
+2
+1 − τ
+2
+
+lg
+
++
+
++ 1
+lg(1 − τ )
+
++ 1
+
+lg(1 + τ ) +
+
+1 − τ
+2
+
+lg(1 − τ )
+
+Corollary 1. For two ranked lists R and S, I(XR; XS) =
+
+is the normalized Kendall’s τ
+
+1 − H2(K) where K = 1−τ
+2
+distance between R and S.
+
+3H2(p) = −p lg p − (1 − p) lg(1 − p). Note that H2(p) =
+H2(1 − p).
+
+692

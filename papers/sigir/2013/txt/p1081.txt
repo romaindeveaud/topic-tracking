@@ -1,0 +1,225 @@
+Spacious: An Interactive Mental Search Interface
+
+Phong D. Vo
+
+TELECOM ParisTech
+
+46 rue Barrault, 75013 Paris
+
+vo@enst.fr
+
+Hichem Sahbi
+
+CNRS TELECOM ParisTech
+46 rue Barrault, 75013 Paris
+
+sahbi@enst.fr
+
+ABSTRACT
+We introduce in this work a novel approach for semantic
+indexing and mental image search. Given semantic con-
+cepts deﬁned by few training examples, our formulation is
+transductive and learns a mapping from an initial ambient
+space, related to low level visual features, to an output space
+spanned by a well deﬁned semantic basis where data can be
+easily explored. With this method, searching for a mental
+visual target reduces to scanning data according to their
+coordinates in the learned semantic space. We illustrate
+the proposed method through our graphical user interface
+“Spacious”, for the purpose of visualization and interactive
+navigation in generic image databases and satellite images.
+
+Categories and Subject Descriptors
+[Users and Interactive IR]: search interface
+
+Keywords
+mental search, subspace learning, data visualization
+
+INTRODUCTION
+
+1.
+Designing queries, in content based image retrieval, has been
+an open problem for years. Ideally, a query should not only
+be accurate but also easy to set. As the user quite often
+does not know exactly how the image of interest looks like,
+a search model with feedback based on visualization and
+interaction is necessary in order to have a global view of an
+image database and to make the search process eﬀective and
+also tractable.
+
+There have been eﬀorts [2] in using visualization as a mean
+to query and collect feedback for image search, using hierar-
+chical trees or graphs. While the formers are hardly exten-
+sible for images with complex scenes or objects, the latters
+make the user getting easily lost due to the complexity of
+graph structures. Although spectral based dimensionality
+reduction techniques produce embeddings that preserve lo-
+cal similarity, their global shapes are often curved or clus-
+
+Permission to make digital or hard copies of part or all of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for proﬁt or commercial advantage and that copies
+bear this notice and the full citation on the ﬁrst page. Copyrights for third-
+party components of this work must be honored. For all other uses, contact
+the owner/author(s).
+SIGIR’13, July 28–August 1, 2013, Dublin, Ireland.
+ACM 978-1-4503-2034-4/13/07.
+
+tered, and this makes them diﬃcult to exploit. Recent ap-
+proaches [1] propose attribute based object models in which
+a visual object can be retrieved by querying its relative at-
+tributes, for example “ﬁnd image C which is greener than
+image A but less open than image B.” These attributes de-
+ﬁne semantic spaces in which the location of a given image
+is determined by the scores of binary classiﬁers associated
+to these attributes. Even though promising, these methods
+require training and annotation steps, which are prohibitive
+especially when handling large scale datasets.
+
+In our proposed method, we share the same perspective
+as [1] but we rather assume that semantics are described
+with few training images where each one includes only one
+semantic; these images are referred to as endmembers. A
+semantic space is then deﬁned by assigning the endmembers
+to their corresponding semantic coordinates. By adopting an
+appropriate metric, we deﬁne the membership (and also the
+embedding) of any given image with respect to the axes of
+the learned semantic space. Thereby, searching for a mental
+visual target simply reduces to scanning and targeting data
+according to their coordinates in that semantic space. We
+apply this proposed method, using a novel software, referred
+to as “Spacious”. We now describe how Spacious performs
+interactive visualization and mental querying on real-world
+scenarios. The technical details are mentioned in Appendix.
+
+2. SATELLITE IMAGE SEARCH
+Nowadays, map services (Google Maps, GeoPortail, Bing,
+etc.) are becoming very popular; however, they are pow-
+erless to search for locations based on their visual content.
+Indeed, with these services, searching large satellite images
+is usually systematic and tedious (especially when metadata
+are scarce or not intuitive to the user). Spacious is an alter-
+native, based on a novel semantic subspace learning method
+(see appendix), that allows the user to visualize, explore and
+localize visual targets eﬃciently. Spacious is built on top of
+PartiView 1, and it allows us to visualize and explore satel-
+lite images including more than ten thousands image regions.
+This software also provides diﬀerent navigation modes, in-
+cluding region subset selection and ﬁltering.
+
+Given a satellite image, we split it into approximately
+12,000 rectangular patches and we encode each patch using
+low level visual features. We also consider a vocabulary of
+semantics including building, road, vegetation and water ; for
+each semantic, we select 15 image patches and their mem-
+berships are set accordingly. Fig. 1(a), 1(d) shows a visu-
+alization of the learned embedding with Spacious. When
+1http://www.haydenplanetarium.org/universe/partiview
+
+1081(a) A mental query “ﬁnd a location with the same proportions of vegetation, road,
+and building” is expressed by positioning the cube selector next to the barycenter
+of the simplex. Endmember patches are superimposed on the three coordinates. A
+candidate is highlighted in the right map.
+
+selector
+
+(b) Patches shown inside the
+cube
+at
+least, two out of the three con-
+cepts roads, buildings and vege-
+tation.
+
+constitute,
+
+(c) A mental query “ﬁnd photos representing sky and plants” will locate the cube selector
+somewhere at the middle of the straight line connecting the two vertices plant and sky.
+Search results are displayed in the right window. On the leftmost, sliders are used to move
+the cube selector and combo-boxes are associated to the selected semantic axes.
+
+(d) This ﬁgure shows pho-
+tos inside the cube selector.
+There are few false alarms
+mixing sky and water.
+
+Figure 1: Snapshots of Spacious used to explore satellite images (a-b) and LabelMe database (c-d).
+
+traversing dimensions separately, we observe a gradual vari-
+ation of the underlying semantics whereas in the span of
+these dimensions, patches mix several semantics.
+
+3. GENERIC IMAGE SEARCH
+Similarly, we consider a vocabulary of semantics which is
+more diverse than in satellite images. This diversity results
+from the large number of concepts present into generic im-
+ages. We learn a semantic space using endmembers as dis-
+cussed earlier, and a user searches for a mental target by
+specifying and reﬁning the abundance of each axis in the
+learned semantic space. In practice, we run experiments on
+a subset of the LabelMe database; we segment each image
+into non overlapping regions, and we describe each one us-
+ing visual features including SIFT, color histogram, texton
+histogram and GIST. Among 2,688 images, we select a sub-
+set of 200 pictures as endmembers in order to learn a twelve
+dimensional semantic space. Fig. 1(c), 1(d) shows a visual-
+ization of that space in 3D using “Spacious”.
+
+5. REFERENCES
+[1] A. K. et al. Whittlesearch: Image search with relative
+
+attribute feedback. In CVPR, 2012.
+
+[2] D. Heesch. A survey of browsing models for content
+based image retrieval. Multimedia Tools Appl., 2008.
+
+APPENDIX
+Let X ∈ Rd×n be a matrix of n input data points and Y ∈
+[0, 1]K×n its underlying membership matrix where Yki > 0
+iﬀ the kth semantic is present into X.i; K is the number
+of semantics. Considering the ﬁrst (cid:96) points as endmembers
+(i.e., each one contains only one semantic), the membership
+vector Y.i, of each endmember, is set to one of the canonical
+base vectors. Now, our problem learns an embedding Z ∈
+RK×n where each entry Zki corresponds to a mapping of
+X.i into the kth semantic dimension
+
+tr(cid:0)ZLZ
+
+(cid:48)(cid:1) s.t
+
+(cid:40)
+
+(cid:80)K
+
+min
+Z≥0
+
+1
+2
+
+Z.i = Y.i
+
+i = 1, . . . , (cid:96)
+
+k=1 Zki = 1 i = (cid:96) + 1, . . . , n
+
+(1)
+
+4. ACKNOWLEDGMENTS
+
+This work was supported in part by a grant from the
+Research Agency ANR (Agence Nationale de la Recherche)
+under the MLVIS project and a grant from CNES (Centre
+National d’Etudes Spatiales) under the VENISE project.
+
+here tr stands for the matrix trace operator. The main term,
+in (1), is a regularizer that ensures similar embedding for
+neighboring data in X and L is a normalized graph Lapla-
+cian. The ﬁrst (cid:96) constraints guarantee that the embedding
+{Z.i}(cid:96)
+i=1 while the last n − (cid:96) constraints control
+the memberships of data points to diﬀerent semantic axes.
+
+i=1 ≡ {Y.i}(cid:96)
+
+1082
