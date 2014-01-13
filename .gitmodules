@@ -1,0 +1,6 @@
+[submodule "pdfminer"]
+	path = pdfminer
+	url = https://github.com/euske/pdfminer.git
+[submodule "gensim"]
+	path = gensim
+	url = https://github.com/piskvorky/gensim.git
