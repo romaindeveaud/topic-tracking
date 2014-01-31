@@ -22,8 +22,6 @@ extract their text using the pdf2txt.py utility.
 Extracted text is stored in papers/<conf>/txt/.  
 """
 
-# TODO: only extract the text of papers that we haven't seen so far.
-
 import sys
 import os
 import subprocess
