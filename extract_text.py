@@ -39,6 +39,8 @@ def main(argv):
         input_file = os.path.join(root,f)
         output_file = input_file.replace('pdf','txt')
         
-        subprocess.call(["python","pdf2txt.py","-o",output_file,input_file])
+        if not os.path.isfile(output_file):
+          print "Extracting "+input_file+"..."
+          subprocess.call(["python","pdf2txt.py","-o",output_file,input_file])
 
 if __name__ == '__main__': sys.exit(main(sys.argv))

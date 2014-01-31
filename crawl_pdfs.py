@@ -20,22 +20,8 @@ import re
 import urllib2
 import hashlib
 from bs4 import BeautifulSoup
+from utils import *
 
-def get_conf_path(conf,year):
-  return os.getcwd()+'/papers/'+conf+'/'+year
-
-def create_folders(conf,year):
-  """
-  Creates the structure of folders for a new conference.
-  """
-  path = get_conf_path(conf,year)
-
-  try:
-    os.makedirs(path)
-  except OSError as exc: # Python >2.5
-    if exc.errno == errno.EEXIST and os.path.isdir(path):
-      pass
-    else: raise
 
 def get_acm_doi_links_from_dblp(conf,year):
   """

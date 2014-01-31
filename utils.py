@@ -1,9 +1,27 @@
 #!/usr/bin/python
 
+import os
+
 def unique(seq):
   seen = set()
   seen_add = seen.add
   return [ x for x in seq if x not in seen and not seen_add(x)]
+
+def get_conf_path(conf,year):
+  return os.getcwd()+'/papers/'+conf+'/'+year
+
+def create_folders(conf,year):
+  """
+  Creates the structure of folders for a new conference.
+  """
+  path = get_conf_path(conf,year)
+
+  try:
+    os.makedirs(path)
+  except OSError as exc: # Python >2.5
+    if exc.errno == errno.EEXIST and os.path.isdir(path):
+      pass
+    else: raise
 
 english_stopwords = ["a","about","above","according","across","after","afterwards","again","against",
 "albeit","all","almost","alone","along","already","also","although","always","am",
