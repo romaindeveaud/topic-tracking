@@ -48,8 +48,12 @@ def train_lda(texts):
   dictionary = corpora.Dictionary(texts)
   corpus = [dictionary.doc2bow(text) for text in texts]
   print "Done."
-  model = models.LdaModel(corpus, id2word=dictionary, num_topics=6,passes=20)
-  model.print_topics(6)
+  model = models.LdaModel(id2word=dictionary, num_topics=13,passes=20,update_every=0)
+  model.VAR_MAXITER = 500
+  model.VAR_THRESH  = 0.0001
+  model.update(corpus)
+
+  model.print_topics(13)
 
 def proceedings2text(conf,year):
   path = get_conf_path(conf,year)+'/txt'
